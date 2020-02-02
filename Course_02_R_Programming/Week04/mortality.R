@@ -1,14 +1,14 @@
 
 # 1 - PLOT 30 DAY MORTALITY -----------------------------------------------
 
-outcome <- read.csv("~/Google Drive/R/Learning/Johns-Hopkins/Course 02 - R Programming/Week 04/Dataset/outcome-of-care-measures.csv", 
+outcome <- read.csv("~/Google Drive/R/Learning/Johns_Hopkins_Coursera/Course_02_R_Programming/Week04/Dataset/outcome-of-care-measures.csv",
                     stringsAsFactors = FALSE)
 
 outcome[ ,11] <- as.numeric(outcome[ ,11])
 
 hist(outcome[ ,11])
 
-place <- "~/Google Drive/R/Learning/Johns-Hopkins/Course 02 - R Programming/Week 04/Dataset/outcome-of-care-measures.csv"
+place <- "~/Google Drive/R/Learning/Johns_Hopkins_Coursera/Course_02_R_Programming/Week04/Dataset/outcome-of-care-measures.csv"
 
 
 # 2 - FIND THE BEST HOSPITAL IN A STATE -----------------------------------
@@ -67,6 +67,38 @@ best <- function(state, outcome){
     
 }
 
+worst <- function(state, outcome){
+  
+  options(warn = -1)
+  
+  possible.outcomes <- c("heart attack", "heart failure", "pneumonia")
+  
+  # Read and wrangle the outcome data
+  
+  df <- open_hospitals(place)
+  
+  # Check that state and outcome is valid
+  
+  if (!any(state == df["State.abb"])) {stop("Invalid State!")}
+  
+  if (!any(outcome == possible.outcomes)) {stop("Invalid Outcome!")}
+  
+  # Look for Lowest Rate
+  
+  filtered <- df[df$State.abb == state, ]
+  
+  max.filtered <- which(filtered[ ,outcome] == max(filtered[ ,outcome], na.rm = TRUE))
+  
+  maximum.outcome <- filtered[max.filtered, "Name"]
+  
+  # Handling Ties
+  
+  ordered.outcome <- maximum.outcome[order(maximum.outcome)]
+  
+  ordered.outcome[1]
+  
+}
+
 # Test Function best
 
 best("TX", "heart attack")
@@ -100,14 +132,39 @@ rankhospital <- function(state, outcome, num = "best") {
   
   if (!any(outcome == possible.outcomes)) {stop("Invalid Outcome!")}
   
-  # Rnak Hospitals by outcome
+  if (is.character(num)) {
+    
+    if (!any(num == c("best", "worst"))) {stop("Invalid position. Use a number, best or worst")}
+    
+  }
+  
+  # Handle "best" and "worst"
+  
+  if (num == "best") {return(best(state, outcome))}
+  
+  if (num == "worst") {return(worst(state, outcome))}
+  
+  # Rank Hospitals by outcome
   
   filtered <- df[df$State.abb == state, ]
   
+  sorted_hospital <- filtered[order(filtered[outcome], filtered$Name), ] # The second term on ordered handles ties.
   
+  # Check if the rank contains num
+  
+  if (num > length(sorted_hospital[!is.na(sorted_hospital)])) {return(NA)}
+  
+  return(sorted_hospital[num, "Name"] )
   
 }
+
+# Test function rankhospital
+
+rankhospital("TX", "heart failure", 4)  
   
-  
+rankhospital("MD", "heart attack", "worst")
+
+rankhospital("MN", "heart attack", 5000)
+
 
 
