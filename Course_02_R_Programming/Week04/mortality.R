@@ -10,9 +10,7 @@ hist(outcome[ ,11])
 
 place <- "~/Google Drive/R/Learning/Johns_Hopkins_Coursera/Course_02_R_Programming/Week04/Dataset/outcome-of-care-measures.csv"
 
-
 # 2 - FIND THE BEST HOSPITAL IN A STATE -----------------------------------
-
 
 open_hospitals <- function(place) {
   
@@ -113,7 +111,6 @@ best("BB", "heart attack")
 
 best("NY", "hert attack")
 
-
 # 3 - RANKING HOSPITALS BY OUTCOME IN A STATE -----------------------------
 
 rankhospital <- function(state, outcome, num = "best") {
@@ -166,5 +163,81 @@ rankhospital("MD", "heart attack", "worst")
 
 rankhospital("MN", "heart attack", 5000)
 
+# 4 - RANKING HOSPITALS IN ALL STATES -------------------------------------
 
+rankall <- function(outcome, num = "best") {
+  
+  options(warn = -1)
+  
+  possible.outcomes <- c("heart attack", "heart failure", "pneumonia")
+  
+  # Read and wrangle the outcome data
+  
+  df <- open_hospitals(place)
+  
+  # Check that state and outcome is valid
+ 
+  if (!any(outcome == possible.outcomes)) {stop("Invalid Outcome!")}
+  
+  if (is.character(num)) {
+    
+    if (!any(num == c("best", "worst"))) {stop("Invalid position. Use a number, best or worst")}
+    
+  }
+  
+  # Function to rank hospital
+  
+      rank <- function(df, num) {
+        
+        if (is.numeric(num)) {
+          
+          sorted_hospital <- df[order(df[outcome], df$Name), ]
+          
+          sorted_hospital[num, c("Name", "State.abb")]
+          
+        } else if (num == "best") {
+          
+          min <- which(df[ ,outcome] == min(df[ ,outcome], na.rm = TRUE))
+          
+          min.outcome <- df[min, c("Name", "State.abb")]
+          
+          # Handling Ties
+          
+          ordered.outcome <- min.outcome[order(min.outcome$Name), ]
+          
+          ordered.outcome[1, ]
+          
+        } else if (num == "worst") {
+          
+          max <- which(df[ ,outcome] == max(df[ ,outcome], na.rm = TRUE))
+          
+          max.outcome <- df[max, c("Name", "State.abb")]
+          
+          # Handling Ties
+          
+          ordered.outcome <- max.outcome[order(max.outcome$Name), ]
+          
+          ordered.outcome[1, ]
+          
+        }
+        
+      }
+  
+  ranked_hospitals <- do.call(rbind, lapply(split(df, df$State.abb), rank, num = num))
+  
+  names(ranked_hospitals) <- c("hospital", "state")
+  
+  ranked_hospitals$state <- row.names(ranked_hospitals)
+  
+  ranked_hospitals
+  
+}
+
+# Test rankall function
+
+head(rankall("heart attack", 20), 10)
+
+tail(rankall("pneumonia", "worst"), 3)
+
+tail(rankall("heart failure"), 10)
 
