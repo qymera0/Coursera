@@ -39,4 +39,8 @@ tapply(df$V2, df$Income.Group, mean, na.rm = TRUE)
 
 # QUESTION 05 -------------------------------------------------------------
 
+library(Hmisc)
 
+df$gdpgroups <- cut2(df$V2, g = 5)
+
+tbl <- table(df$gdpgroups, df$Income.Group)
