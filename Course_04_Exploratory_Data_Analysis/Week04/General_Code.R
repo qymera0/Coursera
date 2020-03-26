@@ -259,12 +259,12 @@ NEIVehCit <- NEIVeh %>%
 
 png(file = "plot6.png")
 
-g4 <- ggplot(NEIVehCit, aes(x = year, y = VehAnTotal, fill = SCC.Level.Two ))
+g4 <- ggplot(NEIVehCit, aes(x = year, y = VehAnTotal, fill = SCC.Level.Two))
 
 g4 + geom_bar(stat = "identity", position = "stack") +
   facet_grid(~fips) + 
   scale_fill_manual(values = c("dodgerblue", "dodgerblue4"),
-                    name = "Type of Vehicles") +
+                    name = "") +
   labs(title = "Comparison of Vehicles pollutant over the years",
        subtitle = expression("Total of tons of PM"[2.5]*" emissions"),
        y = "",
@@ -280,6 +280,12 @@ g4 + geom_bar(stat = "identity", position = "stack") +
         plot.subtitle = element_text(colour = "antiquewhite4"),
         strip.text = element_text(colour = "antiquewhite4"),
         legend.text = element_text(colour = "antiquewhite4"),
-        legend.title = element_text(colour = "antiquewhite4")) 
+        legend.title = element_text(colour = "antiquewhite4")
+  )
+  
 
 dev.off()
+
+g4 + geom_bar(stat = "identity", position = "stack") +
+  facet_grid(~fips) +
+ theme(legend.text = element_text(colour = "grey"))
