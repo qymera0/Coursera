@@ -241,7 +241,7 @@ ggplot(stepDay2, aes(total)) +
 
 The *weekdays()* function was used to determine the weekdays name for **date** variable. The result was stored at **wday** variable. Then, an *if.else* flow was used to transform the character value from **wday** to a two level factor, stored in **wknd**. The imputed data frame was used to this computations. 
 
-After the factor creation, the steps was summarized by mean, grouped by 5 minute interval and week day or week end. 
+After the factor creation, the steps were summarized by mean, grouped by 5 minute interval and week day or week end. 
 
 
 ```r
