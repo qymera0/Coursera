@@ -1,19 +1,59 @@
-# 00 LOAD PACKAGES --------------------------------------------------------
+---
+title: "United States Storm Impact Analysis on Economics and Health"
+author: "Samuel B Baco"
+date: "03/04/2020"
+output:
+  pdf_document: default
+  html_document: default
+---
 
+<style>
+body {
+text-align: justify}
+</style>
+
+# 0 Synopsis
+
+Course Project 2 for Coursera’s Reproducible Research Specialization by Johns Hopkins University. 
+
+Given the provided dataset of storm data in the United States, the student was tasked at utilizing the course materials and lessons to identify:
+
+1. which event(s) had the greatest impact Population **health** ;
+2. which event(s) had the greatest impact Population **economics**.
+
+To do this, one must load the data, subset it, sort through injuries and fatalities (health), and then plot, as well as similar analysis for the economics. 
+
+The Economics proved more challenging, as one had to convert alphabetic variables to numeric for analysis. This lesson also taught how to publish to RPubs directly from RStudio.
+
+# 1 Code preparation
+
+To analyze the data, packages from **tidyverse** were used. In addition, **lubridade** was loaded to help with date and time variables and **grid** plus **gridExtra** were used to help plot graphics combined.
+
+```{r LOAD PACKAGES, message = FALSE}
 library(tidyverse)
 library(lubridate)
 library(gridExtra)
 library(grid)
+library(knitr)
+```
 
-# 01 DOWNLOAD AND LOAD DATA -----------------------------------------------
+```{r SETUP CODE, include = FALSE}
 
-# Setting working directory
+opts_chunk$set(echo = TRUE)
 
-# setwd("/home/qymera0/Documentos/Data Science/Learning/Johns_Hopkins_Coursera/Course_05_Reproducible_Research/Week04")
+```
+
+```{r SET WORKING DIRECTORY, echo = FALSE, include = FALSE}
 
 setwd("D:/Samuel/Meus Documentos/Google Drive/Data Science/Learning/Johns_Hopkins_Coursera/Course_05_Reproducible_Research/Week04")
 
-# Download file
+```
+
+# 2 Dowload and load data
+
+The data for this data analysis come in the form of a comma-separated-value file compressed via the bzip2 algorithm to reduce its size. 
+
+```{r DATA DOWNLOAD AND LOAD, cache = TRUE, message = FALSE, warning = FALSE}
 
 destfile <- "Dataset/tmp.bz2"
 
@@ -24,43 +64,59 @@ if (!file.exists(destfile)) {
         download.file(fileLink, 
                       dest = destifile, 
                       method = "curl")
+        
 }
-
-# Load data
 
 weather <- read_csv("Dataset/tmp.bz2", 
                     col_types = cols(BGN_DATE = col_datetime(format = "%m/%d/%Y %H:%M:%S"), 
                                      BGN_TIME = col_time(format = "%H%M"), 
                                      CROPDMGEXP = col_character()))
+```
 
-# 02 DATA PREPARATION -----------------------------------------------------
+# 3 Data preparation
 
-# Select only columns of interest for whole analysis
+The original dataset has a lot of information that will not be used for this analysis. So, after load the data, only these columns were selected:
 
+* **BGN_DATE**: the date of the event
+
+* **EVTYPE**: type of the event
+
+* **FATALITIES**: number of fatalities (deaths) caused by the event
+
+* **INJURIES**: number of injuries (no death) caused by the event
+
+* **PROPDMG** and **PROPDMGEXP**: property damage. The second variable contains the exponent for the value at first variable
+
+* **CROPDMG** and **CROPDMGEXP**: crop damage. The second variable contains the exponent for the value at first variable
+
+
+```{r COLUMNS AND ROWS FILTER }
 weatherClean <- weather %>%
         select(BGN_DATE, BGN_TIME, EVTYPE, FATALITIES, INJURIES, PROPDMG, PROPDMGEXP, CROPDMG, CROPDMGEXP)
 
-# Select rows for Question 01
+# Rows and columns to analyse fatalities
 
 fatalities <- weatherClean %>%
         select(BGN_DATE, EVTYPE, FATALITIES) %>%
         filter(FATALITIES > 0)
 
+# Rows and columns to analyse injuries
+
 injuries <- weatherClean %>%
         select(BGN_DATE, EVTYPE, INJURIES) %>%
         filter(INJURIES > 0)
 
-
-# Select rows for Question 2
+# Columns to analyse economic damage
 
 economic <- weatherClean %>%
         select(BGN_DATE, EVTYPE, PROPDMG, PROPDMGEXP, CROPDMG, CROPDMGEXP)
+```
 
-table(economic$PROPDMGEXP)
 
-table(economic$CROPDMGEXP)
+For **economic** data, it was necessary to transform the variables PROPDMGEXP and CROPDMGEXP, from character values to numeric values, where *k* represented thousands, *m*, millions and *b*, billions.
 
-# Change the variable type
+
+```{r CHANGE DAMAGE EXPOENT VAR TYPE}
 
 economic <- economic %>%
         filter(grepl("m|k|b", PROPDMGEXP, ignore.case = TRUE)) %>%
@@ -78,20 +134,46 @@ economic <- economic %>%
         mutate(PROPDMGEXP = as.numeric(PROPDMGEXP),
                 CROPDMGEXP = as.numeric(CROPDMGEXP))
 
+```
 
 
-# 03 ANSERING QUESTION 01 -------------------------------------------------
+# 4 Analysing data from health issues
 
-# Across the United States, which types of events are most harmful with respect to population health?
+## 4.1 Fatalities
 
-# Determine with fatalities are top 5
+To simplify the analysis, first the data from **fatalities** was filtered to TOP 5.
+
+
+```{r FATALITIES TOP 5}
 
 fatTop <- fatalities %>%
         group_by(EVTYPE) %>%
         summarise(fat.total = sum(FATALITIES)) %>%
         top_n(n = 5, wt = fat.total)
 
-# Plot TOP 5 fatalities
+```
+
+
+As the aggregation may create an unfair view (because not all event type may have data recorded from the same time spam), also a time series from all event types was done.
+
+
+```{r FATALITIES TIME SERIES}
+
+fatTime <- fatalities %>%
+        group_by(EVTYPE, year(BGN_DATE)) %>%
+        summarise(fat.total = sum(FATALITIES)) %>%
+        filter(EVTYPE %in% fatTop$EVTYPE) %>%
+        rename(fat.year = `year(BGN_DATE)`)
+
+```
+
+
+To compare TOP 5 event types related to fatalities, a side by side graphic was constructed. First both bar chart and time series chart were created using *ggplot2* package. 
+
+
+```{r FATALITIES INDIVIDUAL PLOTS}
+
+# TOP 5 Bar chart
 
 fatTopPlot <- ggplot(fatTop, aes(x = EVTYPE, y = fat.total, fill = EVTYPE)) +
                 geom_bar(stat = "identity") + 
@@ -115,15 +197,7 @@ fatTopPlot <- ggplot(fatTop, aes(x = EVTYPE, y = fat.total, fill = EVTYPE)) +
                               legend.title = element_text(colour = "azure4", face = "bold"),
                               legend.position = "bottom")
 
-# Summarise fatalities cause totals by event type and year
-
-fatTime <- fatalities %>%
-        group_by(EVTYPE, year(BGN_DATE)) %>%
-        summarise(fat.total = sum(FATALITIES)) %>%
-        filter(EVTYPE %in% fatTop$EVTYPE) %>%
-        rename(fat.year = `year(BGN_DATE)`)
-
-# Plot fatalities cause totals by event type and year
+# TOP 5 Time Series Chart
 
 fYearSeries <- ggplot(fatTime, aes(x = fat.year, y = fat.total)) + 
                 geom_line(aes(color = EVTYPE), size = 1) + 
@@ -145,7 +219,13 @@ fYearSeries <- ggplot(fatTime, aes(x = fat.year, y = fat.total)) +
                               legend.title = element_text(colour = "azure4", face = "bold"),
                               legend.position = "bottom")
 
-# Share the same legend bewteen graphics function
+```
+
+
+A function *g_legend* was written to allow both graphics share the same legend.
+
+
+```{r SHARE LEGEND FUNCTION}
 
 g_legend <- function(a.gplot) {
         
@@ -156,12 +236,19 @@ g_legend <- function(a.gplot) {
         legend <- tmp$grobs[[leg]]
         
         return(legend)
-        
 }
 
 # Get fatTopPlot legend
 
 fatLegend <- g_legend(fatTopPlot)
+
+```
+
+
+Then, the *grid* and *gridExtra* package were used to plot the graphics together. 
+
+
+```{r FATALITIES GRID PLOT}
 
 grid.arrange(arrangeGrob(fatTopPlot + theme(legend.position = "none"),
                          fYearSeries + theme(legend.position = "none"),
@@ -176,7 +263,15 @@ grid.arrange(arrangeGrob(fatTopPlot + theme(legend.position = "none"),
                             x = 0,
                             y = 0))
 
-# Determine Injuries
+```
+
+
+## 4.2 Injuries
+
+The same was done to **injuries**. For sake of simplification, the code will not be show. 
+
+
+```{r INJURIES ANALYSIS, echo = FALSE}
 
 # Determine with fatalities are top 5
 
@@ -244,6 +339,8 @@ iYearSeries <- ggplot(injTime, aes(x = inj.year, y = inj.total)) +
 
 injLegend <- g_legend(injTopPlot)
 
+```
+```{r INJURIES GRID PLOT, echo = FALSE}
 
 grid.arrange(arrangeGrob(injTopPlot+ theme(legend.position = "none"),
                          iYearSeries + theme(legend.position = "none"),
@@ -257,18 +354,40 @@ grid.arrange(arrangeGrob(injTopPlot+ theme(legend.position = "none"),
                             vjust = 0.5,
                             x = 0,
                             y = 0))
+```
 
-# 04 ANSWERING QUESTION 02 ------------------------------------------------
 
-# Across the United States, which types of events have the greatest economic consequences?
+# 5 Analysing data from economic damage
 
-# Determine with ecnomic damages causes are top 5
+For **economic** damage analysis, a sum of both property and crop damage was used. 
+
+
+```{r ECNOMICS DMG TOP 5 AND TIME SERIES}
+
+# Top 5 economic damage causes totals
 
 ecoTop <- economic %>%
         mutate(tDmg = (CROPDMG * CROPDMGEXP + PROPDMG * PROPDMGEXP)/1000000000) %>%
         group_by(EVTYPE) %>%
         summarise(dmg.total = sum(tDmg)) %>%
         top_n(n = 5, wt = dmg.total)
+
+# Top 5 economic damage causes time series
+
+ecoTime <- economic %>%
+        mutate(tDmg = (CROPDMG * CROPDMGEXP + PROPDMG * PROPDMGEXP) / 1000000000) %>%
+        group_by(EVTYPE, year(BGN_DATE)) %>%
+        summarise(eco.total = sum(tDmg)) %>%
+        filter(EVTYPE %in% ecoTop$EVTYPE) %>%
+        rename(eco.year = `year(BGN_DATE)`)
+
+```
+
+
+The individual graphics was constructed the same way as **fatalities** and **injuries**. So, for the sake of simplicity, the code will not be show. 
+
+
+```{r ECNOMICS INDIVIDUAL PLOTS, echo = FALSE}
 
 # Plot TOP 5 ecnomic damages causes
 
@@ -294,16 +413,7 @@ ecoTopPlot <- ggplot(ecoTop, aes(x = EVTYPE, y = dmg.total, fill = EVTYPE)) +
               legend.title = element_text(colour = "azure4", face = "bold"),
               legend.position = "bottom")
 
-# Summarise economic damage cause totals by event type and year
-
-ecoTime <- economic %>%
-        mutate(tDmg = (CROPDMG * CROPDMGEXP + PROPDMG * PROPDMGEXP) / 1000000000) %>%
-        group_by(EVTYPE, year(BGN_DATE)) %>%
-        summarise(eco.total = sum(tDmg)) %>%
-        filter(EVTYPE %in% ecoTop$EVTYPE) %>%
-        rename(eco.year = `year(BGN_DATE)`)
-
-# Plot economic damage cause totals by event type and year
+# Plot TOP 5 ecnomic damages time series
 
 eYearSeries <- ggplot(ecoTime, aes(x = eco.year, y = eco.total)) + 
         geom_line(aes(color = EVTYPE), size = 1) + 
@@ -325,6 +435,10 @@ eYearSeries <- ggplot(ecoTime, aes(x = eco.year, y = eco.total)) +
               legend.title = element_text(colour = "azure4", face = "bold"),
               legend.position = "bottom")
 
+```
+
+```{r ECNOMICS GRIP PLOT, echo = FALSE}
+
 # Get fatTopPlot legend
 
 ecoLegend <- g_legend(ecoTopPlot)
@@ -342,4 +456,17 @@ grid.arrange(arrangeGrob(ecoTopPlot+ theme(legend.position = "none"),
                             vjust = 0.5,
                             x = 0,
                             y = 0))
+
+```
+
+# 6 Conclusion
+
+Related to question 01 (heath impact), it is difficult to say that tornados are the most frequent cause to fatalities, due to the fact that its data has been collected for a longer time than other causes. After 1990 other causes becomes important, like heat and excessive heat, while tornados fatalities have fallen down (maybe due to better predictions that allow people to get shelter).
+
+The same behavior is observed to injuries, tornados occurrences fallen down, while flood increasing. 
+
+The only exception was 2011 year, when tornados overcame all other fatalities injuries. This happened because this year several tornadoes reach several states, mainly Alabama.
+
+Related to second question, Food represents the most important cause of damage. 
+
 
