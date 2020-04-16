@@ -1,0 +1,88 @@
+---
+title: "Notebook for Statistical Inference Course Project"
+author: "Samuel B Baco"
+output:
+  pdf_document: default
+  html_notebook: default
+---
+# PACKAGE LOADING
+```{r PACKAGE_LOADING, echo=TRUE, message=FALSE}
+library(tidyverse)
+library(ggpubr)
+```
+# PART 01: SIMULATION EXERCISE
+
+### 1.1 OVERVIEW
+
+This report is related to course project (week 04) for Johns Hopkins Coursera Statistical Inference classes. The main object is to study the Exponential Distribution e compare it with the Central Limit Theorem.
+
+### 1.2 SIMULATIONS
+
+Below it is possible to find the code and results to simulate 1000 exponentials, all having sample size if 40 and lambda of 0.2. The result was saved at **exponentials** variable.
+
+```{r SIMULATIONS, echo = TRUE}
+lambda <- 0.2
+n <- 40 # samples for each distribution
+N <- 1000 # totals of distribution
+exponentials <- replicate(N, rexp(n, lambda))
+```
+
+### 1.3 SAMPLE MEAN VS THEORETICAL MEAN
+
+For *lambda* = 0.2, the exponential distributions has an mean of 5 (*1/lambda*); To calculate the mean for all 1000 generated distributions, the *apply* function will be used. The results will be show using the *ggplot2* package.
+
+```{r SAMPLE MEAN, echo = TRUE, message = FALSE}
+sMean <- as.data.frame(apply(exponentials, 2, mean))
+names(sMean) <- c("mean.exp")
+summary(sMean)
+```
+Comparing the sample mean of theoretical mean, they are pretty close (5.045 vs 5). 
+
+## 1.4 SAMPLE VARIANCE VS THEORETICAL VARIANCE
+
+Using the same dataframe created at **exponentials** and the same method (*apply*), the variances for all 1000 distributions were calculated. The theoretical variance for this example is 25 (*[1/lamda]²*).
+```{r SAMPLE VARIANCE, echo=TRUE}
+sVar <- as.data.frame(apply(exponentials, 2, var))
+names(sVar) <- c("variance.exp")
+summary(sVar)
+```
+Comparing the sample variance with theoretical variance, they are pretty close either (25.327 vs 25).
+
+## 1.5 DISTRIBUTION
+
+In this section, the normality of the data will be investigated. From Central Limit theorem, it is know that a distribution of means is always normal. First, the investigation for sample mean will be invetigated
+
+### Sample Mean
+```{r SAMPLE MEAN HISTOGRAM, echo = FALSE, message = FALSE, fig.width=4, fig.asp=.62}
+g <- ggplot(data = sMean, mapping = aes(x = mean.exp))
+g + geom_histogram(aes(y = ..density..)) + 
+        labs (x = "Mean",y = " ", title = "Mean histogram for exponential distribution", 
+              subtitle = paste("Density for", N, "distributions with lamba =", 1/lambda, "and sample =", n, sep = " ")) +
+        geom_vline(aes(xintercept = 1/lambda, color = "darkblue"), size = 2) +
+        scale_color_identity(guide = "legend", name = "Theoretical Mean", labels = 1/lambda) +
+        stat_function(fun = dnorm, args = list(mean = mean(sMean$mean.exp), sd = sd(sMean$mean.exp)), color = "darkred")
+
+```
+
+Doing a graphical analysis, it seems that the distribution of the sample mean is pratically normal.
+
+### Sample Variance
+```{r SAMPLE VARIANCE HISTOGRAM, echo = FALSE, message = FALSE, fig.width=4, fig.asp=.62}
+g <- ggplot(data = sVar, mapping = aes(x = variance.exp))
+g + geom_histogram(aes(y = ..density..)) + 
+        labs (x = "Variance", 
+              y = " ", 
+              title = "Variance histogram for exponential distribution", 
+              subtitle = paste("Density for", N, "distributions with lamba =", 1/lambda, "and sample =", n, sep = " ")) +
+        geom_vline(aes(xintercept = 1/(lambda^2), color = "darkblue"), size = 2) +
+        scale_color_identity(guide = "legend",
+                       name = "Theoretical Variance",
+                       labels = 1/(lambda^2)) +
+        stat_function(fun = dnorm, 
+                      args = list(mean = mean(sVar$variance.exp), sd = sd(sVar$variance.exp)),
+                      color = "darkred")
+
+```
+The variance distribution, as expected, is very skewed to the left.
+
+# PART 02: BASIC INFERENTIAL DATA ANALYSIS
