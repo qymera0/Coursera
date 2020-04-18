@@ -1,0 +1,30 @@
+---
+title: "Notebook for Statistical Inference Course Project 02"
+author: "Samuel B Baco"
+output:
+  pdf_document: default
+  html_notebook: default
+---
+```{r, message=F, warning=F}
+library(tidyverse)
+```
+
+
+# PART 02: BASIC INFERENTIAL DATA ANALYSIS
+
+This part consist on analysing the ToothGrowth dataset from *datasets* package. Below there is a summary of the dataset.
+```{r TOOTHGROWTH SUMMARY, echo=T, message=F, warning=F}
+summary(ToothGrowth)
+```
+It is possible to see that that are 3 possible values from **dose** variable: `r unique(ToothGrowth$dose)`. 
+```{r BOXPLOT BY DOSIS, echo=T, message=F, warning=F, fig.width=5, fig.asp=.62}
+boxplot(len ~ as.factor(dose), data = ToothGrowth, xlab = "dose")
+```
+There seems to be a considerable difference on variable **len** as **dose** increases. To make sure, it is important to construct the confidence intervals (with 95%) and make sure the extremes does not superimpose themselves.
+```{r CONFIDENCE INTERVALS, echo=T, message=F, warning=F}
+ToothGrowth %>%
+        group_by(dose) %>%
+        summarise(LCIL = mean(len) - qt(0.975, df = (length(len)-1) * sd(len)/sqrt((length(len)))),
+                  UCIL = mean(len) + qt(0.975, df = (length(len)-1)) * sd(len)/sqrt((length(len))))
+```
+As no UCIL (Upper confidence interval limit) is bigger than LCIL (Lower confidence interval limit), it is possible to say that all diferente values of **dose** procuce statiscal different means for **len**, considering a alpha of 5%.
