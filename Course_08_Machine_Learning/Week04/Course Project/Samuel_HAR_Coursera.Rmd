@@ -18,3 +18,10 @@ harTest <- read.csv(fileLinkTest)
 ```
 ## 2. DATA WRANGLING
 
+## 3. FEATURE ENGINEERING
+
+## 4. EDA
+
+## 5. MODELING
+
+## 6. FINAL MODEL EVALUATION
