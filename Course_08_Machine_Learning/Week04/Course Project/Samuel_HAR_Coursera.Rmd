@@ -1,0 +1,20 @@
+---
+title: "HAR Coursera John´s Hopkins Pratical ML"
+author: "Samuel Bozzi Baco"
+output: html_notebook
+---
+
+## 1. DATA DOWNLOAD
+
+The data will be downloaded using the link from Coursera page.
+```{r DATA DOWNLOAD, cache = TRUE}
+fileLinkTraining <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv" 
+
+fileLinkTest <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+
+harTraining <- read.csv(fileLinkTraining)
+
+harTest <- read.csv(fileLinkTest)
+```
+## 2. DATA WRANGLING
+
