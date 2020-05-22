@@ -3,7 +3,14 @@ title: "HAR Coursera John´s Hopkins Pratical ML"
 author: "Samuel Bozzi Baco"
 output: html_notebook
 ---
+## 0. PACKAGE LOAD AND MARKDOWN CONFIGURATION
 
+```{r PACKAGE LOAD, echo=T, message=F, warning=F}
+library(tidyverse)
+library(caret)
+library(future)
+library(doParallel)
+```
 ## 1. DATA DOWNLOAD
 
 The data will be downloaded using the link from Coursera page.
@@ -18,7 +25,30 @@ harTest <- read.csv(fileLinkTest)
 ```
 ## 2. DATA WRANGLING
 
-## 3. FEATURE ENGINEERING
+First columns from both dataset (user name, time stamps) will be remove since the model shall be independent from the person who uses it and it is not a time series. Data on test set has several empty columns and “pure NA´s” columns. This ones will be removed from both training set. Columns with no variation at test set will also be removed.
+
+```{r COLUMN SELECTION}
+not_all_na <- function(x) any(!is.na(x)) # function to determine if the column has all values like NA´s
+
+harTstClean <-
+        harTest %>%
+        select(-c("X", 
+                  "user_name", 
+                  "raw_timestamp_part_1", 
+                  "raw_timestamp_part_2", 
+                  "cvtd_timestamp",
+                  "problem_id",
+                  "num_window")) %>%
+        select_if(not_all_na) %>%
+        select_if(~n_distinct(.) > 1)
+
+harTrnClean <- harTraining[ ,c(names(harTstClean), "classe")]
+```
+The training dataset will be split to allow model test and validation at a proportion to 60/20/20 %. 
+```{r DATASET SPLIT}
+inTrain = createDataPartition
+
+```
 
 ## 4. EDA
 

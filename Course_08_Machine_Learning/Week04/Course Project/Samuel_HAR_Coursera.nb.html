@@ -1751,6 +1751,19 @@ summary {
 
 
 <!-- rnb-text-begin -->
+<div id="package-load-and-markdown-configuration" class="section level2">
+<h2>0. PACKAGE LOAD AND MARKDOWN CONFIGURATION</h2>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubGlicmFyeSh0aWR5dmVyc2UpXG5saWJyYXJ5KGNhcmV0KVxubGlicmFyeShmdXR1cmUpXG5saWJyYXJ5KGRvUGFyYWxsZWwpXG5gYGAifQ== -->
+<pre class="r"><code>library(tidyverse)
+library(caret)
+library(future)
+library(doParallel)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+</div>
 <div id="data-download" class="section level2">
 <h2>1. DATA DOWNLOAD</h2>
 <p>The data will be downloaded using the link from Coursera page.</p>
@@ -1770,9 +1783,37 @@ harTest &lt;- read.csv(fileLinkTest)</code></pre>
 </div>
 <div id="data-wrangling" class="section level2">
 <h2>2. DATA WRANGLING</h2>
-</div>
-<div id="feature-engineering" class="section level2">
-<h2>3. FEATURE ENGINEERING</h2>
+<p>First columns from both dataset (user name, time stamps) will be remove since the model shall be independent from the person who uses it and it is not a time series. Data on test set has several empty columns and “pure NA´s” columns. This ones will be removed from both training set. Columns with no variation at test set will also be removed.</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubm90X2FsbF9uYSA8LSBmdW5jdGlvbih4KSBhbnkoIWlzLm5hKHgpKSAjIGZ1bmN0aW9uIHRvIGRldGVybWluZSBpZiB0aGUgY29sdW1uIGhhcyBhbGwgdmFsdWVzIGxpa2UgTkHCtHNcblxuaGFyVHN0Q2xlYW4gPC1cbiAgICAgICAgaGFyVGVzdCAlPiVcbiAgICAgICAgc2VsZWN0KC1jKFwiWFwiLCBcbiAgICAgICAgICAgICAgICAgIFwidXNlcl9uYW1lXCIsIFxuICAgICAgICAgICAgICAgICAgXCJyYXdfdGltZXN0YW1wX3BhcnRfMVwiLCBcbiAgICAgICAgICAgICAgICAgIFwicmF3X3RpbWVzdGFtcF9wYXJ0XzJcIiwgXG4gICAgICAgICAgICAgICAgICBcImN2dGRfdGltZXN0YW1wXCIsXG4gICAgICAgICAgICAgICAgICBcInByb2JsZW1faWRcIixcbiAgICAgICAgICAgICAgICAgIFwibnVtX3dpbmRvd1wiKSkgJT4lXG4gICAgICAgIHNlbGVjdF9pZihub3RfYWxsX25hKSAlPiVcbiAgICAgICAgc2VsZWN0X2lmKH5uX2Rpc3RpbmN0KC4pID4gMSlcblxuaGFyVHJuQ2xlYW4gPC0gaGFyVHJhaW5pbmdbICxjKG5hbWVzKGhhclRzdENsZWFuKSwgXCJjbGFzc2VcIildXG5gYGAifQ== -->
+<pre class="r"><code>not_all_na &lt;- function(x) any(!is.na(x)) # function to determine if the column has all values like NA´s
+
+harTstClean &lt;-
+        harTest %&gt;%
+        select(-c(&quot;X&quot;, 
+                  &quot;user_name&quot;, 
+                  &quot;raw_timestamp_part_1&quot;, 
+                  &quot;raw_timestamp_part_2&quot;, 
+                  &quot;cvtd_timestamp&quot;,
+                  &quot;problem_id&quot;,
+                  &quot;num_window&quot;)) %&gt;%
+        select_if(not_all_na) %&gt;%
+        select_if(~n_distinct(.) &gt; 1)
+
+harTrnClean &lt;- harTraining[ ,c(names(harTstClean), &quot;classe&quot;)]</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>The training dataset will be split to allow model test and validation at a proportion to 60/20/20 %.</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuaW5UcmFpbiA9IGNyZWF0ZURhdGFQYXJ0aXRpb25cblxuYGBgIn0= -->
+<pre class="r"><code>inTrain = createDataPartition
+</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
 </div>
 <div id="eda" class="section level2">
 <h2>4. EDA</h2>
@@ -1785,7 +1826,7 @@ harTest &lt;- read.csv(fileLinkTest)</code></pre>
 <!-- rnb-text-end -->
 </div>
 
-<div id="rmd-source-code">LS0tDQp0aXRsZTogIkhBUiBDb3Vyc2VyYSBKb2huwrRzIEhvcGtpbnMgUHJhdGljYWwgTUwiDQphdXRob3I6ICJTYW11ZWwgQm96emkgQmFjbyINCm91dHB1dDogaHRtbF9ub3RlYm9vaw0KLS0tDQoNCiMjIDEuIERBVEEgRE9XTkxPQUQNCg0KVGhlIGRhdGEgd2lsbCBiZSBkb3dubG9hZGVkIHVzaW5nIHRoZSBsaW5rIGZyb20gQ291cnNlcmEgcGFnZS4NCmBgYHtyIERBVEEgRE9XTkxPQUQsIGNhY2hlID0gVFJVRX0NCmZpbGVMaW5rVHJhaW5pbmcgPC0gImh0dHBzOi8vZDM5NnF1c3phNDBvcmMuY2xvdWRmcm9udC5uZXQvcHJlZG1hY2hsZWFybi9wbWwtdHJhaW5pbmcuY3N2IiANCg0KZmlsZUxpbmtUZXN0IDwtICJodHRwczovL2QzOTZxdXN6YTQwb3JjLmNsb3VkZnJvbnQubmV0L3ByZWRtYWNobGVhcm4vcG1sLXRlc3RpbmcuY3N2Ig0KDQpoYXJUcmFpbmluZyA8LSByZWFkLmNzdihmaWxlTGlua1RyYWluaW5nKQ0KDQpoYXJUZXN0IDwtIHJlYWQuY3N2KGZpbGVMaW5rVGVzdCkNCmBgYA0KIyMgMi4gREFUQSBXUkFOR0xJTkcNCg0KIyMgMy4gRkVBVFVSRSBFTkdJTkVFUklORw0KDQojIyA0LiBFREENCg0KIyMgNS4gTU9ERUxJTkcNCg0KIyMgNi4gRklOQUwgTU9ERUwgRVZBTFVBVElPTg==</div>
+<div id="rmd-source-code">LS0tDQp0aXRsZTogIkhBUiBDb3Vyc2VyYSBKb2huwrRzIEhvcGtpbnMgUHJhdGljYWwgTUwiDQphdXRob3I6ICJTYW11ZWwgQm96emkgQmFjbyINCm91dHB1dDogaHRtbF9ub3RlYm9vaw0KLS0tDQojIyAwLiBQQUNLQUdFIExPQUQgQU5EIE1BUktET1dOIENPTkZJR1VSQVRJT04NCg0KYGBge3IgUEFDS0FHRSBMT0FELCBlY2hvPVQsIG1lc3NhZ2U9Riwgd2FybmluZz1GfQ0KbGlicmFyeSh0aWR5dmVyc2UpDQpsaWJyYXJ5KGNhcmV0KQ0KbGlicmFyeShmdXR1cmUpDQpsaWJyYXJ5KGRvUGFyYWxsZWwpDQpgYGANCiMjIDEuIERBVEEgRE9XTkxPQUQNCg0KVGhlIGRhdGEgd2lsbCBiZSBkb3dubG9hZGVkIHVzaW5nIHRoZSBsaW5rIGZyb20gQ291cnNlcmEgcGFnZS4NCmBgYHtyIERBVEEgRE9XTkxPQUQsIGNhY2hlID0gVFJVRX0NCmZpbGVMaW5rVHJhaW5pbmcgPC0gImh0dHBzOi8vZDM5NnF1c3phNDBvcmMuY2xvdWRmcm9udC5uZXQvcHJlZG1hY2hsZWFybi9wbWwtdHJhaW5pbmcuY3N2IiANCg0KZmlsZUxpbmtUZXN0IDwtICJodHRwczovL2QzOTZxdXN6YTQwb3JjLmNsb3VkZnJvbnQubmV0L3ByZWRtYWNobGVhcm4vcG1sLXRlc3RpbmcuY3N2Ig0KDQpoYXJUcmFpbmluZyA8LSByZWFkLmNzdihmaWxlTGlua1RyYWluaW5nKQ0KDQpoYXJUZXN0IDwtIHJlYWQuY3N2KGZpbGVMaW5rVGVzdCkNCmBgYA0KIyMgMi4gREFUQSBXUkFOR0xJTkcNCg0KRmlyc3QgY29sdW1ucyBmcm9tIGJvdGggZGF0YXNldCAodXNlciBuYW1lLCB0aW1lIHN0YW1wcykgd2lsbCBiZSByZW1vdmUgc2luY2UgdGhlIG1vZGVsIHNoYWxsIGJlIGluZGVwZW5kZW50IGZyb20gdGhlIHBlcnNvbiB3aG8gdXNlcyBpdCBhbmQgaXQgaXMgbm90IGEgdGltZSBzZXJpZXMuIERhdGEgb24gdGVzdCBzZXQgaGFzIHNldmVyYWwgZW1wdHkgY29sdW1ucyBhbmQg4oCccHVyZSBOQcK0c+KAnSBjb2x1bW5zLiBUaGlzIG9uZXMgd2lsbCBiZSByZW1vdmVkIGZyb20gYm90aCB0cmFpbmluZyBzZXQuIENvbHVtbnMgd2l0aCBubyB2YXJpYXRpb24gYXQgdGVzdCBzZXQgd2lsbCBhbHNvIGJlIHJlbW92ZWQuDQoNCmBgYHtyIENPTFVNTiBTRUxFQ1RJT059DQpub3RfYWxsX25hIDwtIGZ1bmN0aW9uKHgpIGFueSghaXMubmEoeCkpICMgZnVuY3Rpb24gdG8gZGV0ZXJtaW5lIGlmIHRoZSBjb2x1bW4gaGFzIGFsbCB2YWx1ZXMgbGlrZSBOQcK0cw0KDQpoYXJUc3RDbGVhbiA8LQ0KICAgICAgICBoYXJUZXN0ICU+JQ0KICAgICAgICBzZWxlY3QoLWMoIlgiLCANCiAgICAgICAgICAgICAgICAgICJ1c2VyX25hbWUiLCANCiAgICAgICAgICAgICAgICAgICJyYXdfdGltZXN0YW1wX3BhcnRfMSIsIA0KICAgICAgICAgICAgICAgICAgInJhd190aW1lc3RhbXBfcGFydF8yIiwgDQogICAgICAgICAgICAgICAgICAiY3Z0ZF90aW1lc3RhbXAiLA0KICAgICAgICAgICAgICAgICAgInByb2JsZW1faWQiLA0KICAgICAgICAgICAgICAgICAgIm51bV93aW5kb3ciKSkgJT4lDQogICAgICAgIHNlbGVjdF9pZihub3RfYWxsX25hKSAlPiUNCiAgICAgICAgc2VsZWN0X2lmKH5uX2Rpc3RpbmN0KC4pID4gMSkNCg0KaGFyVHJuQ2xlYW4gPC0gaGFyVHJhaW5pbmdbICxjKG5hbWVzKGhhclRzdENsZWFuKSwgImNsYXNzZSIpXQ0KYGBgDQpUaGUgdHJhaW5pbmcgZGF0YXNldCB3aWxsIGJlIHNwbGl0IHRvIGFsbG93IG1vZGVsIHRlc3QgYW5kIHZhbGlkYXRpb24gYXQgYSBwcm9wb3J0aW9uIHRvIDYwLzIwLzIwICUuIA0KYGBge3IgREFUQVNFVCBTUExJVH0NCmluVHJhaW4gPSBjcmVhdGVEYXRhUGFydGl0aW9uDQoNCmBgYA0KDQojIyA0LiBFREENCg0KIyMgNS4gTU9ERUxJTkcNCg0KIyMgNi4gRklOQUwgTU9ERUwgRVZBTFVBVElPTg==</div>
 
 
 
