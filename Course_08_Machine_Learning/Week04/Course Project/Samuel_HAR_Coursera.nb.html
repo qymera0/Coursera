@@ -1755,12 +1755,16 @@ summary {
 <h2>0. PACKAGE LOAD AND MARKDOWN CONFIGURATION</h2>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubGlicmFyeSh0aWR5dmVyc2UpXG5saWJyYXJ5KGNhcmV0KVxubGlicmFyeShmdXR1cmUpXG5saWJyYXJ5KGRvUGFyYWxsZWwpXG5gYGAifQ== -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubGlicmFyeSh0aWR5dmVyc2UpXG5saWJyYXJ5KGNhcmV0KVxubGlicmFyeShmdXR1cmUpXG5saWJyYXJ5KGRvUGFyYWxsZWwpXG5saWJyYXJ5KGUxMDcxKVxuYGBgIn0= -->
 <pre class="r"><code>library(tidyverse)
 library(caret)
 library(future)
-library(doParallel)</code></pre>
+library(doParallel)
+library(e1071)</code></pre>
 <!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiRXJyb3IgaW4gbGlicmFyeShlMTA3MSkgOiB0aGVyZSBpcyBubyBwYWNrYWdlIGNhbGxlZCDigJhlMTA3MeKAmVxuIn0= -->
+<pre><code>Error in library(e1071) : there is no package called ‘e1071’</code></pre>
+<!-- rnb-output-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
@@ -1769,14 +1773,13 @@ library(doParallel)</code></pre>
 <p>The data will be downloaded using the link from Coursera page.</p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZmlsZUxpbmtUcmFpbmluZyA8LSBcImh0dHBzOi8vZDM5NnF1c3phNDBvcmMuY2xvdWRmcm9udC5uZXQvcHJlZG1hY2hsZWFybi9wbWwtdHJhaW5pbmcuY3N2XCIgXG5cbmZpbGVMaW5rVGVzdCA8LSBcImh0dHBzOi8vZDM5NnF1c3phNDBvcmMuY2xvdWRmcm9udC5uZXQvcHJlZG1hY2hsZWFybi9wbWwtdGVzdGluZy5jc3ZcIlxuXG5oYXJUcmFpbmluZyA8LSByZWFkLmNzdihmaWxlTGlua1RyYWluaW5nKVxuXG5oYXJUZXN0IDwtIHJlYWQuY3N2KGZpbGVMaW5rVGVzdClcbmBgYCJ9 -->
-<pre class="r"><code>fileLinkTraining &lt;- &quot;https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv&quot; 
-
-fileLinkTest &lt;- &quot;https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv&quot;
-
-harTraining &lt;- read.csv(fileLinkTraining)
-
-harTest &lt;- read.csv(fileLinkTest)</code></pre>
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYGBgclxuZmlsZUxpbmtUcmFpbmluZyA8LSBcXGh0dHBzOi8vZDM5NnF1c3phNDBvcmMuY2xvdWRmcm9udC5uZXQvcHJlZG1hY2hsZWFybi9wbWwtdHJhaW5pbmcuY3N2XFwgXG5cbmZpbGVMaW5rVGVzdCA8LSBcXGh0dHBzOi8vZDM5NnF1c3phNDBvcmMuY2xvdWRmcm9udC5uZXQvcHJlZG1hY2hsZWFybi9wbWwtdGVzdGluZy5jc3ZcXFxuXG5oYXJUcmFpbmluZyA8LSByZWFkLmNzdihmaWxlTGlua1RyYWluaW5nKVxuXG5oYXJUZXN0IDwtIHJlYWQuY3N2KGZpbGVMaW5rVGVzdClcbmBgYFxuYGBgIn0= -->
+<p><code>r</code>r fileLinkTraining &lt;- ://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv </p>
+<p>fileLinkTest &lt;- ://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv<br />
+</p>
+<p>harTraining &lt;- read.csv(fileLinkTraining)</p>
+<p>harTest &lt;- read.csv(fileLinkTest)</p>
+<pre><code></code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
@@ -1786,47 +1789,94 @@ harTest &lt;- read.csv(fileLinkTest)</code></pre>
 <p>First columns from both dataset (user name, time stamps) will be remove since the model shall be independent from the person who uses it and it is not a time series. Data on test set has several empty columns and “pure NA´s” columns. This ones will be removed from both training set. Columns with no variation at test set will also be removed.</p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubm90X2FsbF9uYSA8LSBmdW5jdGlvbih4KSBhbnkoIWlzLm5hKHgpKSAjIGZ1bmN0aW9uIHRvIGRldGVybWluZSBpZiB0aGUgY29sdW1uIGhhcyBhbGwgdmFsdWVzIGxpa2UgTkHCtHNcblxuaGFyVHN0Q2xlYW4gPC1cbiAgICAgICAgaGFyVGVzdCAlPiVcbiAgICAgICAgc2VsZWN0KC1jKFwiWFwiLCBcbiAgICAgICAgICAgICAgICAgIFwidXNlcl9uYW1lXCIsIFxuICAgICAgICAgICAgICAgICAgXCJyYXdfdGltZXN0YW1wX3BhcnRfMVwiLCBcbiAgICAgICAgICAgICAgICAgIFwicmF3X3RpbWVzdGFtcF9wYXJ0XzJcIiwgXG4gICAgICAgICAgICAgICAgICBcImN2dGRfdGltZXN0YW1wXCIsXG4gICAgICAgICAgICAgICAgICBcInByb2JsZW1faWRcIixcbiAgICAgICAgICAgICAgICAgIFwibnVtX3dpbmRvd1wiKSkgJT4lXG4gICAgICAgIHNlbGVjdF9pZihub3RfYWxsX25hKSAlPiVcbiAgICAgICAgc2VsZWN0X2lmKH5uX2Rpc3RpbmN0KC4pID4gMSlcblxuaGFyVHJuQ2xlYW4gPC0gaGFyVHJhaW5pbmdbICxjKG5hbWVzKGhhclRzdENsZWFuKSwgXCJjbGFzc2VcIildXG5gYGAifQ== -->
-<pre class="r"><code>not_all_na &lt;- function(x) any(!is.na(x)) # function to determine if the column has all values like NA´s
-
-harTstClean &lt;-
-        harTest %&gt;%
-        select(-c(&quot;X&quot;, 
-                  &quot;user_name&quot;, 
-                  &quot;raw_timestamp_part_1&quot;, 
-                  &quot;raw_timestamp_part_2&quot;, 
-                  &quot;cvtd_timestamp&quot;,
-                  &quot;problem_id&quot;,
-                  &quot;num_window&quot;)) %&gt;%
-        select_if(not_all_na) %&gt;%
-        select_if(~n_distinct(.) &gt; 1)
-
-harTrnClean &lt;- harTraining[ ,c(names(harTstClean), &quot;classe&quot;)]</code></pre>
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYGBgclxubm90X2FsbF9uYSA8LSBmdW5jdGlvbih4KSBhbnkoIWlzLm5hKHgpKSAjIGZ1bmN0aW9uIHRvIGRldGVybWluZSBpZiB0aGUgY29sdW1uIGhhcyBhbGwgdmFsdWVzIGxpa2UgTkHCtHNcblxuaGFyVHN0Q2xlYW4gPC1cbiAgICAgICAgaGFyVGVzdCAlPiVcbiAgICAgICAgc2VsZWN0KC1jKFxcWFxcLCBcbiAgICAgICAgICAgICAgICAgIFxcdXNlcl9uYW1lXFwsIFxuICAgICAgICAgICAgICAgICAgXFxyYXdfdGltZXN0YW1wX3BhcnRfMVxcLCBcbiAgICAgICAgICAgICAgICAgIFxccmF3X3RpbWVzdGFtcF9wYXJ0XzJcXCwgXG4gICAgICAgICAgICAgICAgICBcXGN2dGRfdGltZXN0YW1wXFwsXG4gICAgICAgICAgICAgICAgICBcXHByb2JsZW1faWRcXCxcbiAgICAgICAgICAgICAgICAgIFxcbnVtX3dpbmRvd1xcKSkgJT4lXG4gICAgICAgIHNlbGVjdF9pZihub3RfYWxsX25hKSAlPiVcbiAgICAgICAgc2VsZWN0X2lmKH5uX2Rpc3RpbmN0KC4pID4gMSlcblxuaGFyVHJuQ2xlYW4gPC0gaGFyVHJhaW5pbmdbICxjKG5hbWVzKGhhclRzdENsZWFuKSwgXFxjbGFzc2VcXCldXG5gYGBcbmBgYCJ9 -->
+<p><code>r</code>r not_all_na &lt;- function(x) any(!is.na(x)) # function to determine if the column has all values like NA´s</p>
+<p>harTstClean &lt;- harTest %&gt;% select(-c(, _name, _timestamp_part_1, _timestamp_part_2, _timestamp, _id, _window)) %&gt;% select_if(not_all_na) %&gt;% select_if(~n_distinct(.) &gt; 1)</p>
+<p>harTrnClean &lt;- harTraining[ ,c(names(harTstClean), )]</p>
+<pre><code></code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <p>The training dataset will be split to allow model test and validation at a proportion to 60/20/20 %.</p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuaW5UcmFpbiA9IGNyZWF0ZURhdGFQYXJ0aXRpb25cblxuYGBgIn0= -->
-<pre class="r"><code>inTrain = createDataPartition
-</code></pre>
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuaW5WYWwgPSBjcmVhdGVEYXRhUGFydGl0aW9uKGhhclRybkNsZWFuJGNsYXNzZSwgcCA9IDAuMiwgbGlzdCA9IEYpXG5cbnZhbCA8LSBoYXJUcm5DbGVhbltpblZhbCwgXVxuXG5tb2RlbCA8LSBoYXJUcm5DbGVhblstaW5WYWwsIF1cblxuaW5UcmFpbiA8LSBjcmVhdGVEYXRhUGFydGl0aW9uKG1vZGVsJGNsYXNzZSwgcCA9ICgwLjYvMC44KSwgbGlzdCA9IEYpXG5cbnRyYWluIDwtIG1vZGVsW2luVHJhaW4sIF1cblxudGVzdCA8LSBtb2RlbFstaW5UcmFpbiwgXVxuYGBgIn0= -->
+<pre class="r"><code>inVal = createDataPartition(harTrnClean$classe, p = 0.2, list = F)
+
+val &lt;- harTrnClean[inVal, ]
+
+model &lt;- harTrnClean[-inVal, ]
+
+inTrain &lt;- createDataPartition(model$classe, p = (0.6/0.8), list = F)
+
+train &lt;- model[inTrain, ]
+
+test &lt;- model[-inTrain, ]</code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
 <div id="eda" class="section level2">
-<h2>4. EDA</h2>
+<h2>3. EDA</h2>
+<p>Pre-model tasks are related evaluate the Null Model predictions. This will be accomplished considering the most frequent class in all “predictions”, generating a lower limit for any model that will be created, as suggest by Zumel and Mount (2014).</p>
+<div id="null-model-performance" class="section level3">
+<h3>3.1 Null model performance</h3>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubnVsbFByZWQgPC0gdGVzdCAlPiUgc2VsZWN0KFwiY2xhc3NlXCIpXG5cbm51bGxQcmVkJHByZWQuY2xhc3MgPC0gbmFtZXMoc29ydCh0YWJsZShudWxsUHJlZCRjbGFzc2UpLCBkZWNyZWFzaW5nID0gVFJVRSlbMV0pXG5cbnByaW50KGNvbmZ1c2lvbk1hdHJpeChhcy5mYWN0b3IobnVsbFByZWQkcHJlZC5jbGFzcyksIHJlZmVyZW5jZSA9IGFzLmZhY3RvcihudWxsUHJlZCRjbGFzc2UpKSlcbmBgYCJ9 -->
+<pre class="r"><code>nullPred &lt;- test %&gt;% select(&quot;classe&quot;)
+
+nullPred$pred.class &lt;- names(sort(table(nullPred$classe), decreasing = TRUE)[1])
+
+print(confusionMatrix(as.factor(nullPred$pred.class), reference = as.factor(nullPred$classe)))</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiQ29uZnVzaW9uIE1hdHJpeCBhbmQgU3RhdGlzdGljc1xuXG4gICAgICAgICAgUmVmZXJlbmNlXG5QcmVkaWN0aW9uICAgIEEgICAgQiAgICBDICAgIEQgICAgRVxuICAgICAgICAgQSAxMTE2ICA3NTkgIDY4NCAgNjQzICA3MjFcbiAgICAgICAgIEIgICAgMCAgICAwICAgIDAgICAgMCAgICAwXG4gICAgICAgICBDICAgIDAgICAgMCAgICAwICAgIDAgICAgMFxuICAgICAgICAgRCAgICAwICAgIDAgICAgMCAgICAwICAgIDBcbiAgICAgICAgIEUgICAgMCAgICAwICAgIDAgICAgMCAgICAwXG5cbk92ZXJhbGwgU3RhdGlzdGljc1xuICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgXG4gICAgICAgICAgICAgICBBY2N1cmFjeSA6IDAuMjg0NSAgICAgICAgICBcbiAgICAgICAgICAgICAgICAgOTUlIENJIDogKDAuMjcwNCwgMC4yOTg5KVxuICAgIE5vIEluZm9ybWF0aW9uIFJhdGUgOiAwLjI4NDUgICAgICAgICAgXG4gICAgUC1WYWx1ZSBbQWNjID4gTklSXSA6IDAuNTA2ICAgICAgICAgICBcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIFxuICAgICAgICAgICAgICAgICAgS2FwcGEgOiAwICAgICAgICAgICAgICAgXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBcbiBNY25lbWFyJ3MgVGVzdCBQLVZhbHVlIDogTkEgICAgICAgICAgICAgIFxuXG5TdGF0aXN0aWNzIGJ5IENsYXNzOlxuXG4gICAgICAgICAgICAgICAgICAgICBDbGFzczogQSBDbGFzczogQiBDbGFzczogQyBDbGFzczogRCBDbGFzczogRVxuU2Vuc2l0aXZpdHkgICAgICAgICAgICAxLjAwMDAgICAwLjAwMDAgICAwLjAwMDAgICAwLjAwMDAgICAwLjAwMDBcblNwZWNpZmljaXR5ICAgICAgICAgICAgMC4wMDAwICAgMS4wMDAwICAgMS4wMDAwICAgMS4wMDAwICAgMS4wMDAwXG5Qb3MgUHJlZCBWYWx1ZSAgICAgICAgIDAuMjg0NSAgICAgIE5hTiAgICAgIE5hTiAgICAgIE5hTiAgICAgIE5hTlxuTmVnIFByZWQgVmFsdWUgICAgICAgICAgICBOYU4gICAwLjgwNjUgICAwLjgyNTYgICAwLjgzNjEgICAwLjgxNjJcblByZXZhbGVuY2UgICAgICAgICAgICAgMC4yODQ1ICAgMC4xOTM1ICAgMC4xNzQ0ICAgMC4xNjM5ICAgMC4xODM4XG5EZXRlY3Rpb24gUmF0ZSAgICAgICAgIDAuMjg0NSAgIDAuMDAwMCAgIDAuMDAwMCAgIDAuMDAwMCAgIDAuMDAwMFxuRGV0ZWN0aW9uIFByZXZhbGVuY2UgICAxLjAwMDAgICAwLjAwMDAgICAwLjAwMDAgICAwLjAwMDAgICAwLjAwMDBcbkJhbGFuY2VkIEFjY3VyYWN5ICAgICAgMC41MDAwICAgMC41MDAwICAgMC41MDAwICAgMC41MDAwICAgMC41MDAwXG4ifQ== -->
+<pre><code>Confusion Matrix and Statistics
+
+          Reference
+Prediction    A    B    C    D    E
+         A 1116  759  684  643  721
+         B    0    0    0    0    0
+         C    0    0    0    0    0
+         D    0    0    0    0    0
+         E    0    0    0    0    0
+
+Overall Statistics
+                                          
+               Accuracy : 0.2845          
+                 95% CI : (0.2704, 0.2989)
+    No Information Rate : 0.2845          
+    P-Value [Acc &gt; NIR] : 0.506           
+                                          
+                  Kappa : 0               
+                                          
+ Mcnemar's Test P-Value : NA              
+
+Statistics by Class:
+
+                     Class: A Class: B Class: C Class: D Class: E
+Sensitivity            1.0000   0.0000   0.0000   0.0000   0.0000
+Specificity            0.0000   1.0000   1.0000   1.0000   1.0000
+Pos Pred Value         0.2845      NaN      NaN      NaN      NaN
+Neg Pred Value            NaN   0.8065   0.8256   0.8361   0.8162
+Prevalence             0.2845   0.1935   0.1744   0.1639   0.1838
+Detection Rate         0.2845   0.0000   0.0000   0.0000   0.0000
+Detection Prevalence   1.0000   0.0000   0.0000   0.0000   0.0000
+Balanced Accuracy      0.5000   0.5000   0.5000   0.5000   0.5000</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+</div>
 </div>
 <div id="modeling" class="section level2">
-<h2>5. MODELING</h2>
+<h2>4. MODELING</h2>
 </div>
 <div id="final-model-evaluation" class="section level2">
-<h2>6. FINAL MODEL EVALUATION</h2>
+<h2>5. FINAL MODEL EVALUATION</h2>
 <!-- rnb-text-end -->
 </div>
 
-<div id="rmd-source-code">LS0tDQp0aXRsZTogIkhBUiBDb3Vyc2VyYSBKb2huwrRzIEhvcGtpbnMgUHJhdGljYWwgTUwiDQphdXRob3I6ICJTYW11ZWwgQm96emkgQmFjbyINCm91dHB1dDogaHRtbF9ub3RlYm9vaw0KLS0tDQojIyAwLiBQQUNLQUdFIExPQUQgQU5EIE1BUktET1dOIENPTkZJR1VSQVRJT04NCg0KYGBge3IgUEFDS0FHRSBMT0FELCBlY2hvPVQsIG1lc3NhZ2U9Riwgd2FybmluZz1GfQ0KbGlicmFyeSh0aWR5dmVyc2UpDQpsaWJyYXJ5KGNhcmV0KQ0KbGlicmFyeShmdXR1cmUpDQpsaWJyYXJ5KGRvUGFyYWxsZWwpDQpgYGANCiMjIDEuIERBVEEgRE9XTkxPQUQNCg0KVGhlIGRhdGEgd2lsbCBiZSBkb3dubG9hZGVkIHVzaW5nIHRoZSBsaW5rIGZyb20gQ291cnNlcmEgcGFnZS4NCmBgYHtyIERBVEEgRE9XTkxPQUQsIGNhY2hlID0gVFJVRX0NCmZpbGVMaW5rVHJhaW5pbmcgPC0gImh0dHBzOi8vZDM5NnF1c3phNDBvcmMuY2xvdWRmcm9udC5uZXQvcHJlZG1hY2hsZWFybi9wbWwtdHJhaW5pbmcuY3N2IiANCg0KZmlsZUxpbmtUZXN0IDwtICJodHRwczovL2QzOTZxdXN6YTQwb3JjLmNsb3VkZnJvbnQubmV0L3ByZWRtYWNobGVhcm4vcG1sLXRlc3RpbmcuY3N2Ig0KDQpoYXJUcmFpbmluZyA8LSByZWFkLmNzdihmaWxlTGlua1RyYWluaW5nKQ0KDQpoYXJUZXN0IDwtIHJlYWQuY3N2KGZpbGVMaW5rVGVzdCkNCmBgYA0KIyMgMi4gREFUQSBXUkFOR0xJTkcNCg0KRmlyc3QgY29sdW1ucyBmcm9tIGJvdGggZGF0YXNldCAodXNlciBuYW1lLCB0aW1lIHN0YW1wcykgd2lsbCBiZSByZW1vdmUgc2luY2UgdGhlIG1vZGVsIHNoYWxsIGJlIGluZGVwZW5kZW50IGZyb20gdGhlIHBlcnNvbiB3aG8gdXNlcyBpdCBhbmQgaXQgaXMgbm90IGEgdGltZSBzZXJpZXMuIERhdGEgb24gdGVzdCBzZXQgaGFzIHNldmVyYWwgZW1wdHkgY29sdW1ucyBhbmQg4oCccHVyZSBOQcK0c+KAnSBjb2x1bW5zLiBUaGlzIG9uZXMgd2lsbCBiZSByZW1vdmVkIGZyb20gYm90aCB0cmFpbmluZyBzZXQuIENvbHVtbnMgd2l0aCBubyB2YXJpYXRpb24gYXQgdGVzdCBzZXQgd2lsbCBhbHNvIGJlIHJlbW92ZWQuDQoNCmBgYHtyIENPTFVNTiBTRUxFQ1RJT059DQpub3RfYWxsX25hIDwtIGZ1bmN0aW9uKHgpIGFueSghaXMubmEoeCkpICMgZnVuY3Rpb24gdG8gZGV0ZXJtaW5lIGlmIHRoZSBjb2x1bW4gaGFzIGFsbCB2YWx1ZXMgbGlrZSBOQcK0cw0KDQpoYXJUc3RDbGVhbiA8LQ0KICAgICAgICBoYXJUZXN0ICU+JQ0KICAgICAgICBzZWxlY3QoLWMoIlgiLCANCiAgICAgICAgICAgICAgICAgICJ1c2VyX25hbWUiLCANCiAgICAgICAgICAgICAgICAgICJyYXdfdGltZXN0YW1wX3BhcnRfMSIsIA0KICAgICAgICAgICAgICAgICAgInJhd190aW1lc3RhbXBfcGFydF8yIiwgDQogICAgICAgICAgICAgICAgICAiY3Z0ZF90aW1lc3RhbXAiLA0KICAgICAgICAgICAgICAgICAgInByb2JsZW1faWQiLA0KICAgICAgICAgICAgICAgICAgIm51bV93aW5kb3ciKSkgJT4lDQogICAgICAgIHNlbGVjdF9pZihub3RfYWxsX25hKSAlPiUNCiAgICAgICAgc2VsZWN0X2lmKH5uX2Rpc3RpbmN0KC4pID4gMSkNCg0KaGFyVHJuQ2xlYW4gPC0gaGFyVHJhaW5pbmdbICxjKG5hbWVzKGhhclRzdENsZWFuKSwgImNsYXNzZSIpXQ0KYGBgDQpUaGUgdHJhaW5pbmcgZGF0YXNldCB3aWxsIGJlIHNwbGl0IHRvIGFsbG93IG1vZGVsIHRlc3QgYW5kIHZhbGlkYXRpb24gYXQgYSBwcm9wb3J0aW9uIHRvIDYwLzIwLzIwICUuIA0KYGBge3IgREFUQVNFVCBTUExJVH0NCmluVHJhaW4gPSBjcmVhdGVEYXRhUGFydGl0aW9uDQoNCmBgYA0KDQojIyA0LiBFREENCg0KIyMgNS4gTU9ERUxJTkcNCg0KIyMgNi4gRklOQUwgTU9ERUwgRVZBTFVBVElPTg==</div>
+<div id="rmd-source-code">LS0tCnRpdGxlOiAiSEFSIENvdXJzZXJhIEpvaG7CtHMgSG9wa2lucyBQcmF0aWNhbCBNTCIKYXV0aG9yOiAiU2FtdWVsIEJvenppIEJhY28iCm91dHB1dDogaHRtbF9ub3RlYm9vawotLS0KIyMgMC4gUEFDS0FHRSBMT0FEIEFORCBNQVJLRE9XTiBDT05GSUdVUkFUSU9OCgpgYGB7ciBQQUNLQUdFIExPQUQsIGVjaG89VCwgbWVzc2FnZT1GLCB3YXJuaW5nPUZ9CmxpYnJhcnkodGlkeXZlcnNlKQpsaWJyYXJ5KGNhcmV0KQpsaWJyYXJ5KGZ1dHVyZSkKbGlicmFyeShkb1BhcmFsbGVsKQpgYGAKIyMgMS4gREFUQSBET1dOTE9BRAoKVGhlIGRhdGEgd2lsbCBiZSBkb3dubG9hZGVkIHVzaW5nIHRoZSBsaW5rIGZyb20gQ291cnNlcmEgcGFnZS4KYGBge3IgREFUQSBET1dOTE9BRCwgY2FjaGUgPSBUUlVFfQpmaWxlTGlua1RyYWluaW5nIDwtICJodHRwczovL2QzOTZxdXN6YTQwb3JjLmNsb3VkZnJvbnQubmV0L3ByZWRtYWNobGVhcm4vcG1sLXRyYWluaW5nLmNzdiIgCgpmaWxlTGlua1Rlc3QgPC0gImh0dHBzOi8vZDM5NnF1c3phNDBvcmMuY2xvdWRmcm9udC5uZXQvcHJlZG1hY2hsZWFybi9wbWwtdGVzdGluZy5jc3YiCgpoYXJUcmFpbmluZyA8LSByZWFkLmNzdihmaWxlTGlua1RyYWluaW5nKQoKaGFyVGVzdCA8LSByZWFkLmNzdihmaWxlTGlua1Rlc3QpCmBgYAojIyAyLiBEQVRBIFdSQU5HTElORwoKRmlyc3QgY29sdW1ucyBmcm9tIGJvdGggZGF0YXNldCAodXNlciBuYW1lLCB0aW1lIHN0YW1wcykgd2lsbCBiZSByZW1vdmUgc2luY2UgdGhlIG1vZGVsIHNoYWxsIGJlIGluZGVwZW5kZW50IGZyb20gdGhlIHBlcnNvbiB3aG8gdXNlcyBpdCBhbmQgaXQgaXMgbm90IGEgdGltZSBzZXJpZXMuIERhdGEgb24gdGVzdCBzZXQgaGFzIHNldmVyYWwgZW1wdHkgY29sdW1ucyBhbmQg4oCccHVyZSBOQcK0c+KAnSBjb2x1bW5zLiBUaGlzIG9uZXMgd2lsbCBiZSByZW1vdmVkIGZyb20gYm90aCB0cmFpbmluZyBzZXQuIENvbHVtbnMgd2l0aCBubyB2YXJpYXRpb24gYXQgdGVzdCBzZXQgd2lsbCBhbHNvIGJlIHJlbW92ZWQuCgpgYGB7ciBDT0xVTU4gU0VMRUNUSU9OfQpub3RfYWxsX25hIDwtIGZ1bmN0aW9uKHgpIGFueSghaXMubmEoeCkpICMgZnVuY3Rpb24gdG8gZGV0ZXJtaW5lIGlmIHRoZSBjb2x1bW4gaGFzIGFsbCB2YWx1ZXMgbGlrZSBOQcK0cwoKaGFyVHN0Q2xlYW4gPC0KICAgICAgICBoYXJUZXN0ICU+JQogICAgICAgIHNlbGVjdCgtYygiWCIsIAogICAgICAgICAgICAgICAgICAidXNlcl9uYW1lIiwgCiAgICAgICAgICAgICAgICAgICJyYXdfdGltZXN0YW1wX3BhcnRfMSIsIAogICAgICAgICAgICAgICAgICAicmF3X3RpbWVzdGFtcF9wYXJ0XzIiLCAKICAgICAgICAgICAgICAgICAgImN2dGRfdGltZXN0YW1wIiwKICAgICAgICAgICAgICAgICAgInByb2JsZW1faWQiLAogICAgICAgICAgICAgICAgICAibnVtX3dpbmRvdyIpKSAlPiUKICAgICAgICBzZWxlY3RfaWYobm90X2FsbF9uYSkgJT4lCiAgICAgICAgc2VsZWN0X2lmKH5uX2Rpc3RpbmN0KC4pID4gMSkKCmhhclRybkNsZWFuIDwtIGhhclRyYWluaW5nWyAsYyhuYW1lcyhoYXJUc3RDbGVhbiksICJjbGFzc2UiKV0KYGBgClRoZSB0cmFpbmluZyBkYXRhc2V0IHdpbGwgYmUgc3BsaXQgdG8gYWxsb3cgbW9kZWwgdGVzdCBhbmQgdmFsaWRhdGlvbiBhdCBhIHByb3BvcnRpb24gdG8gNjAvMjAvMjAgJS4gCmBgYHtyIERBVEFTRVQgU1BMSVR9CmluVmFsID0gY3JlYXRlRGF0YVBhcnRpdGlvbihoYXJUcm5DbGVhbiRjbGFzc2UsIHAgPSAwLjIsIGxpc3QgPSBGKQoKdmFsIDwtIGhhclRybkNsZWFuW2luVmFsLCBdCgptb2RlbCA8LSBoYXJUcm5DbGVhblstaW5WYWwsIF0KCmluVHJhaW4gPC0gY3JlYXRlRGF0YVBhcnRpdGlvbihtb2RlbCRjbGFzc2UsIHAgPSAoMC42LzAuOCksIGxpc3QgPSBGKQoKdHJhaW4gPC0gbW9kZWxbaW5UcmFpbiwgXQoKdGVzdCA8LSBtb2RlbFstaW5UcmFpbiwgXQpgYGAKIyMgMy4gRURBCgpQcmUtbW9kZWwgdGFza3MgYXJlIHJlbGF0ZWQgZXZhbHVhdGUgdGhlIE51bGwgTW9kZWwgcHJlZGljdGlvbnMuIFRoaXMgd2lsbCBiZSBhY2NvbXBsaXNoZWQgY29uc2lkZXJpbmcgdGhlIG1vc3QgZnJlcXVlbnQgY2xhc3MgaW4gYWxsIOKAnHByZWRpY3Rpb25z4oCdLCBnZW5lcmF0aW5nIGEgbG93ZXIgbGltaXQgZm9yIGFueSBtb2RlbCB0aGF0IHdpbGwgYmUgY3JlYXRlZCwgYXMgc3VnZ2VzdCBieSBadW1lbCBhbmQgTW91bnQgKDIwMTQpLiAKCiMjIyAzLjEgTnVsbCBtb2RlbCBwZXJmb3JtYW5jZQoKYGBge3IgTlVMTCBNT0RFTCBQRVJGT1JNQU5DRSwgbWVzc2FnZT1GLCB3YXJuaW5nPUZ9Cm51bGxQcmVkIDwtIHRlc3QgJT4lIHNlbGVjdCgiY2xhc3NlIikKCm51bGxQcmVkJHByZWQuY2xhc3MgPC0gbmFtZXMoc29ydCh0YWJsZShudWxsUHJlZCRjbGFzc2UpLCBkZWNyZWFzaW5nID0gVFJVRSlbMV0pCgpwcmludChjb25mdXNpb25NYXRyaXgoYXMuZmFjdG9yKG51bGxQcmVkJHByZWQuY2xhc3MpLCByZWZlcmVuY2UgPSBhcy5mYWN0b3IobnVsbFByZWQkY2xhc3NlKSkpCmBgYAoKCgojIyA0LiBNT0RFTElORwoKIyMgNS4gRklOQUwgTU9ERUwgRVZBTFVBVElPTg==</div>
 
 
 

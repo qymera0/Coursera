@@ -46,12 +46,34 @@ harTrnClean <- harTraining[ ,c(names(harTstClean), "classe")]
 ```
 The training dataset will be split to allow model test and validation at a proportion to 60/20/20 %. 
 ```{r DATASET SPLIT}
-inTrain = createDataPartition
+inVal = createDataPartition(harTrnClean$classe, p = 0.2, list = F)
 
+val <- harTrnClean[inVal, ]
+
+model <- harTrnClean[-inVal, ]
+
+inTrain <- createDataPartition(model$classe, p = (0.6/0.8), list = F)
+
+train <- model[inTrain, ]
+
+test <- model[-inTrain, ]
+```
+## 3. EDA
+
+Pre-model tasks are related evaluate the Null Model predictions. This will be accomplished considering the most frequent class in all “predictions”, generating a lower limit for any model that will be created, as suggest by Zumel and Mount (2014). 
+
+### 3.1 Null model performance
+
+```{r NULL MODEL PERFORMANCE, message=F, warning=F}
+nullPred <- test %>% select("classe")
+
+nullPred$pred.class <- names(sort(table(nullPred$classe), decreasing = TRUE)[1])
+
+print(confusionMatrix(as.factor(nullPred$pred.class), reference = as.factor(nullPred$classe)))
 ```
 
-## 4. EDA
 
-## 5. MODELING
 
-## 6. FINAL MODEL EVALUATION
+## 4. MODELING
+
+## 5. FINAL MODEL EVALUATION
