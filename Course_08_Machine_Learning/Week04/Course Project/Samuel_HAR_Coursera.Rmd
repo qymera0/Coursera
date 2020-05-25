@@ -6,10 +6,17 @@ output: html_notebook
 ## 0. PACKAGE LOAD AND MARKDOWN CONFIGURATION
 
 ```{r PACKAGE LOAD, echo=T, message=F, warning=F}
-library(tidyverse)
 library(caret)
 library(future)
 library(doParallel)
+library(heatmaply)
+library(factoextra)
+library(FactoMineR)
+library(nnet)
+library(future)
+library(doParallel)
+library(e1071)
+library(nnet)
 ```
 ## 1. DATA DOWNLOAD
 
@@ -60,10 +67,9 @@ test <- model[-inTrain, ]
 ```
 ## 3. EDA
 
-Pre-model tasks are related evaluate the Null Model predictions. This will be accomplished considering the most frequent class in all “predictions”, generating a lower limit for any model that will be created, as suggest by Zumel and Mount (2014). 
-
 ### 3.1 Null model performance
 
+Pre-model tasks are related evaluate the Null Model predictions. This will be accomplished considering the most frequent class in all “predictions”, generating a lower limit for any model that will be created, as suggest by Zumel and Mount (2014). 
 ```{r NULL MODEL PERFORMANCE, message=F, warning=F}
 nullPred <- test %>% select("classe")
 
@@ -72,8 +78,48 @@ nullPred$pred.class <- names(sort(table(nullPred$classe), decreasing = TRUE)[1])
 print(confusionMatrix(as.factor(nullPred$pred.class), reference = as.factor(nullPred$classe)))
 ```
 
+# 3.2 Covariates correlation
 
+The multicolinearity (covariates correlation) will be investigated, since it can be harmful for some kind of models, like logistic regression. To investigate, a the heatmaply_cor (from package heatmaply) will be user so related covariates will also be grouped together using a hierarchical cluster technique. 
+
+```{r MULTICOLINEARITY}
+corrMat <- harTrnClean %>% select(-classe) %>% mutate_if(is.integer, as.numeric) %>% cor()
+
+heatmaply(corrMat, symm = TRUE, cexRow = .0001, cexCol = .0001, branches_lwd = .1)
+```
+
+For the plot, it is possible to see that very few covariates presents correlation. 
+
+```{r PCA COVARIATES}
+pcaCov <- harTrnClean %>% select(-classe) %>% PCA(scale.unit = TRUE, graph = FALSE)
+
+get_eigenvalue(pcaCov)
+
+fviz_eig(pcaCov)
+```
+Although the correlation between covariates is not big, a principal components analysis show that with only 10 components (from 52) it is possible to explain 90% of the total variation.
 
 ## 4. MODELING
 
+All modeling will be done considering a parallel computation using **doParallel** package.
+```{r PARALELLIZATION}
+workers <- availableCores()
+
+cl <- makeClusterPSOCK(workers)
+```
+
+
+### 4.1 Multinomial Regression
+
+The first model that will be tested it is multinomial regression. Two models will be done: with and without principal component as a pre-processing.
+
+```{r MULTINOMIAL REGRESSION, warning=F, message=F}
+registerDoParallel(cl)
+
+mdlLrOr <- train(classe ~., data = harTrnClean, method = 'multinom')
+
+stopCluster(cl)
+```
+
+        
 ## 5. FINAL MODEL EVALUATION
