@@ -117,6 +117,8 @@ registerDoParallel(cl)
 mdlLrOr <- train(classe ~., data = harTrnClean, method = 'multinom')
 
 stopCluster(cl)
+
+registerDoSEQ()
 ```
 
         

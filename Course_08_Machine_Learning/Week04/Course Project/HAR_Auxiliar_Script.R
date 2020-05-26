@@ -65,11 +65,9 @@ fviz_eig(pcaCov)
 
 # 4 MODELING --------------------------------------------------------------
 
-workers <- availableCores()
+workers <- availableCores() - 1
 
 cl <- makeClusterPSOCK(workers)
-
-registerDoParallel(cl)
 
 # 4.1 Multinomial Regression
 
@@ -80,3 +78,19 @@ mdlLrSc <- train(classe ~., data = harTrnClean, method = 'multinom', preProcess 
 stopCluster(cl)
 
 registerDoSEQ()
+
+save(mdlLrSc, 
+     file = "~/Documents/Data Science/R/Learning/Johns_Hopkins_Coursera/Course_08_Machine_Learning/Week04/Course Project/LogRegScale.RData")
+
+# With PCA
+
+registerDoParallel(cl)
+
+mdlLrPCA <- train(classe ~., data = harTrnClean, method = 'multinom', preProcess = "pca")
+
+stopCluster(cl)
+
+registerDoSEQ()
+
+save(mdlLrPCA, 
+     file = "~/Documents/Data Science/R/Learning/Johns_Hopkins_Coursera/Course_08_Machine_Learning/Week04/Course Project/LogRegPca.RData")
