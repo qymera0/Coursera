@@ -94,3 +94,18 @@ registerDoSEQ()
 
 save(mdlLrPCA, 
      file = "~/Documents/Data Science/R/Learning/Johns_Hopkins_Coursera/Course_08_Machine_Learning/Week04/Course Project/LogRegPca.RData")
+
+# 4.2 Linear Discriminant Analysis
+
+cl <- makeClusterPSOCK(workers)
+
+registerDoParallel(cl)
+
+mdlLrLDA <- train(classe ~., data = harTrnClean, method = 'lda')
+
+stopCluster(cl)
+
+registerDoSEQ()
+
+save(mdlLrLDA, 
+     file = "~/Documents/Data Science/R/Learning/Johns_Hopkins_Coursera/Course_08_Machine_Learning/Week04/Course Project/LDA.RData")
