@@ -6,6 +6,7 @@ output: html_notebook
 ## 0. PACKAGE LOAD AND MARKDOWN CONFIGURATION
 
 ```{r PACKAGE LOAD, echo=T, message=F, warning=F}
+library(tidyverse)
 library(caret)
 library(future)
 library(doParallel)
@@ -16,7 +17,6 @@ library(nnet)
 library(future)
 library(doParallel)
 library(e1071)
-library(nnet)
 ```
 ## 1. DATA DOWNLOAD
 
@@ -103,12 +103,10 @@ Although the correlation between covariates is not big, a principal components a
 
 All modeling will be done considering a parallel computation using **doParallel** package.
 ```{r PARALELLIZATION}
-workers <- availableCores()
+workers <- availableCores() - 1
 
 cl <- makeClusterPSOCK(workers)
 ```
-
-
 ### 4.1 Multinomial Regression
 
 The first model that will be tested it is multinomial regression. Two models will be done: with and without principal component as a pre-processing.

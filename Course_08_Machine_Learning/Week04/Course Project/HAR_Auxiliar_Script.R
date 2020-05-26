@@ -10,6 +10,7 @@ library(FactoMineR)
 library(nnet)
 library(future)
 library(doParallel)
+library(e1071)
 
 # 1. DATA DOWNLOAD --------------------------------------------------------
 
@@ -72,14 +73,10 @@ registerDoParallel(cl)
 
 # 4.1 Multinomial Regression
 
-mdlLrOr <- train(classe ~., data = harTrnClean, method = 'multinom')
-
-stopCluster(cl)   
-
-summary(mdlLrOr)
-
 registerDoParallel(cl)
 
 mdlLrSc <- train(classe ~., data = harTrnClean, method = 'multinom', preProcess = "scale")
 
 stopCluster(cl)
+
+registerDoSEQ()
