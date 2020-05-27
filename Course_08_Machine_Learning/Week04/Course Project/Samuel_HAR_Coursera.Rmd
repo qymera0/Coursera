@@ -1,7 +1,10 @@
 ---
 title: "HAR Coursera John´s Hopkins Pratical ML"
 author: "Samuel Bozzi Baco"
-output: html_notebook
+output:
+  pdf_document: default
+  html_notebook: default
+always_allow_html: true
 ---
 ## 0. PACKAGE LOAD AND MARKDOWN CONFIGURATION
 
@@ -34,7 +37,7 @@ harTest <- read.csv(fileLinkTest)
 
 First columns from both dataset (user name, time stamps) will be remove since the model shall be independent from the person who uses it and it is not a time series. Data on test set has several empty columns and “pure NA´s” columns. This ones will be removed from both training set. Columns with no variation at test set will also be removed.
 
-```{r COLUMN SELECTION}
+```{r COLUMN SELECTION, cache = TRUE}
 not_all_na <- function(x) any(!is.na(x)) # function to determine if the column has all values like NA´s
 
 harTstClean <-
@@ -52,7 +55,7 @@ harTstClean <-
 harTrnClean <- harTraining[ ,c(names(harTstClean), "classe")]
 ```
 The training dataset will be split to allow model test and validation at a proportion to 60/20/20 %. 
-```{r DATASET SPLIT}
+```{r DATASET SPLIT, cache = TRUE}
 inVal = createDataPartition(harTrnClean$classe, p = 0.2, list = F)
 
 val <- harTrnClean[inVal, ]
@@ -70,7 +73,7 @@ test <- model[-inTrain, ]
 ### 3.1 Null model performance
 
 Pre-model tasks are related evaluate the Null Model predictions. This will be accomplished considering the most frequent class in all “predictions”, generating a lower limit for any model that will be created, as suggest by Zumel and Mount (2014). 
-```{r NULL MODEL PERFORMANCE, message=F, warning=F}
+```{r NULL MODEL PERFORMANCE, message=F, warning=F,cache=T}
 nullPred <- test %>% select("classe")
 
 nullPred$pred.class <- names(sort(table(nullPred$classe), decreasing = TRUE)[1])
@@ -82,15 +85,14 @@ print(confusionMatrix(as.factor(nullPred$pred.class), reference = as.factor(null
 
 The multicolinearity (covariates correlation) will be investigated, since it can be harmful for some kind of models, like logistic regression. To investigate, a the heatmaply_cor (from package heatmaply) will be user so related covariates will also be grouped together using a hierarchical cluster technique. 
 
-```{r MULTICOLINEARITY}
+```{r MULTICOLINEARITY, cache=T}
 corrMat <- harTrnClean %>% select(-classe) %>% mutate_if(is.integer, as.numeric) %>% cor()
 
 heatmaply(corrMat, symm = TRUE, cexRow = .0001, cexCol = .0001, branches_lwd = .1)
 ```
-
 For the plot, it is possible to see that very few covariates presents correlation. 
 
-```{r PCA COVARIATES}
+```{r PCA COVARIATES, cache=T}
 pcaCov <- harTrnClean %>% select(-classe) %>% PCA(scale.unit = TRUE, graph = FALSE)
 
 get_eigenvalue(pcaCov)
@@ -104,22 +106,83 @@ Although the correlation between covariates is not big, a principal components a
 All modeling will be done considering a parallel computation using **doParallel** package.
 ```{r PARALELLIZATION}
 workers <- availableCores() - 1
-
-cl <- makeClusterPSOCK(workers)
 ```
 ### 4.1 Multinomial Regression
 
-The first model that will be tested it is multinomial regression. Two models will be done: with and without principal component as a pre-processing.
+The first model that will be tested it is multinomial regression. Two models will be done: (1) all with centar an scale and with and without principal component as a pre-processing.
 
-```{r MULTINOMIAL REGRESSION, warning=F, message=F}
+#### Only Center and Scale
+
+```{r MR CENTER SCALE, message=FALSE, warning=F, error=FALSE, cache=T, results='hide'}
+cl <- makeClusterPSOCK(workers)
+
 registerDoParallel(cl)
 
-mdlLrOr <- train(classe ~., data = harTrnClean, method = 'multinom')
+mdlLrSc <- train(classe ~., data = train, method = 'multinom', preProcess = c("center","scale"))
 
 stopCluster(cl)
 
 registerDoSEQ()
 ```
+```{r MR PREDICTIONS, cache=T}
+lrScPred <- predict.train(mdlLrSc, newdata = test)
 
-        
+print(confusionMatrix(lrScPred, reference = as.factor(test$classe)))
+```
+The multinomial regression, centering and scalling the variables, was able to achieve a accuracy of 0,73 on test dataset.
+
+#### Center, Scale and PCA
+```{r MR PCA, message=FALSE, warning=F, error=FALSE, cache=T, results='hide'}
+cl <- makeClusterPSOCK(workers)
+
+registerDoParallel(cl)
+
+mdlLrPCA <- train(classe ~., data = train, method = 'multinom', preProcess = c("center", "scale", "pca"))
+
+stopCluster(cl)
+
+registerDoSEQ()
+```
+```{r MR PCA PREDICTIONS, cache=T}
+lrPCAPred <- predict.train(mdlLrPCA, newdata = test)
+
+print(confusionMatrix(lrPCAPred, reference = as.factor(test$classe)))
+```
+Using PCA as a pre-processing have decreased the accuracy on test set. 
+
+### 4.2 Random Forest
+
+To improve the prediction capabilities, a random forest will be used, considering all hyperparameters as defautl values.
+
+```{r RANDOM FOREST, cache=T, message=F, error=F, warning=F, results='hide'}
+cl <- makeClusterPSOCK(workers)
+
+registerDoParallel(cl)
+
+mdlRf <- train(classe ~., data = train, method = 'ranger')
+
+stopCluster(cl)
+
+registerDoSEQ()
+```
+```{r RF PREDICTION}
+rfPred <- predict.train(mdlRf, newdata = test)
+
+print(confusionMatrix(mdlRf, reference = as.factor(test$classe)))
+```
+USing only the default values of hyperparameters, it was possible to increase the accuracy to 0.99. To have a second view of the performance, the model will be tested on validation data set.
+```{r RF VALIDATION}
+rfval <- predict.train(mdlRf, newdata = val)
+
+print(confusionMatrix(mdlRf, reference = as.factor(val$classe)))
+```
 ## 5. FINAL MODEL EVALUATION
+
+Final prediction for 20 selected cases.
+
+```{r FINAL PREDICTION}
+finalPred <- predict.train(mdlRf, newdata = harTstClean)
+
+finalPred
+```
+

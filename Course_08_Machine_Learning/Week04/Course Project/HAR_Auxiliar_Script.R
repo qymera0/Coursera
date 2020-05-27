@@ -67,33 +67,45 @@ fviz_eig(pcaCov)
 
 workers <- availableCores() - 1
 
-cl <- makeClusterPSOCK(workers)
-
 # 4.1 Multinomial Regression
+
+# Centered and scale
+
+cl <- makeClusterPSOCK(workers)
 
 registerDoParallel(cl)
 
-mdlLrSc <- train(classe ~., data = harTrnClean, method = 'multinom', preProcess = "scale")
+mdlLrSc <- train(classe ~., data = train, method = 'multinom', preProcess = c("center","scale"))
 
 stopCluster(cl)
 
 registerDoSEQ()
 
 save(mdlLrSc, 
-     file = "~/Documents/Data Science/R/Learning/Johns_Hopkins_Coursera/Course_08_Machine_Learning/Week04/Course Project/LogRegScale.RData")
+     file = "~/Google Drive/Data Science/Learning/Johns_Hopkins_Coursera/Course_08_Machine_Learning/Week04/Course Project/LogRegScale.RData")
 
-# With PCA
+lrScPred <- predict.train(mdlLrSc, newdata = test)
+
+print(confusionMatrix(lrScPred, reference = as.factor(test$classe)))
+
+# Scale with PCA
+
+cl <- makeClusterPSOCK(workers)
 
 registerDoParallel(cl)
 
-mdlLrPCA <- train(classe ~., data = harTrnClean, method = 'multinom', preProcess = "pca")
+mdlLrPCA <- train(classe ~., data = train, method = 'multinom', preProcess = c("center", "scale", "pca"))
 
 stopCluster(cl)
 
 registerDoSEQ()
 
 save(mdlLrPCA, 
-     file = "~/Documents/Data Science/R/Learning/Johns_Hopkins_Coursera/Course_08_Machine_Learning/Week04/Course Project/LogRegPca.RData")
+     file = "~/Google Drive/Data Science/Learning/Johns_Hopkins_Coursera/Course_08_Machine_Learning/Week04/Course Project/LogRegPca.RData")
+
+lrPCAPred <- predict.train(mdlLrPCA, newdata = test)
+
+print(confusionMatrix(lrPCAPred, reference = as.factor(test$classe)))
 
 # 4.2 Linear Discriminant Analysis
 
@@ -101,11 +113,53 @@ cl <- makeClusterPSOCK(workers)
 
 registerDoParallel(cl)
 
-mdlLrLDA <- train(classe ~., data = harTrnClean, method = 'lda')
+mdlLDA <- train(classe ~., data = train, method = 'lda', preProcess = c("center", "scale"))
 
 stopCluster(cl)
 
 registerDoSEQ()
 
-save(mdlLrLDA, 
-     file = "~/Documents/Data Science/R/Learning/Johns_Hopkins_Coursera/Course_08_Machine_Learning/Week04/Course Project/LDA.RData")
+LDAPred <- predict.train(mdlLDA, newdata = test)
+
+print(confusionMatrix(mdlLDA, reference = as.factor(test$classe)))
+
+save(mdlLDA, 
+     file = "~/Google Drive/Data Science/Learning/Johns_Hopkins_Coursera/Course_08_Machine_Learning/Week04/Course Project/LDA.RData")
+
+# 4.3 Random Forest
+
+cl <- makeClusterPSOCK(workers)
+
+registerDoParallel(cl)
+
+mdlRf <- train(classe ~., data = train, method = 'ranger')
+
+stopCluster(cl)
+
+registerDoSEQ()
+
+rfPred <- predict.train(mdlRf, newdata = test)
+
+print(confusionMatrix(mdlRf, reference = as.factor(test$classe)))
+
+save(mdlRf, 
+     file = "~/Google Drive/Data Science/Learning/Johns_Hopkins_Coursera/Course_08_Machine_Learning/Week04/Course Project/mdlRf.RData")
+
+# 4.4 Gradient Boost Machine
+
+cl <- makeClusterPSOCK(workers)
+
+registerDoParallel(cl)
+
+mdlGbm <- train(classe ~., data = train, method = 'gbm')
+
+stopCluster(cl)
+
+registerDoSEQ()
+
+gbmPred <- predict.train(mdlGbm, newdata = test)
+
+print(confusionMatrix(mdlGbm, reference = as.factor(test$classe)))
+
+save(mdlGbm, 
+     file = "~/Google Drive/Data Science/Learning/Johns_Hopkins_Coursera/Course_08_Machine_Learning/Week04/Course Project/mdlGbm.RData")
