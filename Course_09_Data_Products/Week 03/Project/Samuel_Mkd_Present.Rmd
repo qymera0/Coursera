@@ -1,0 +1,52 @@
+---
+title: "R Markdown Presentation & Plotly"
+author: "Samuel Bozzi Baco"
+date: 06-15-2020
+output: ioslides_presentation
+---
+
+```{r SETUP, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r LOAD PACKAGES, message=F, warning=FALSE}
+library(tidyverse)
+library(plotly)
+```
+## Data Explanation and Download
+
+The data tha will be used to this exercise is the *mtcars*
+```{r LOAD DATA, echo=TRUE}
+data("mtcars")
+```
+
+## Plotly Plot
+
+```{r PLOT DATA}
+g <- ggplot(mtcars, aes(x = wt, y = disp, col = mpg)) +
+        geom_point() +
+                        labs(title = "Effect of weigh on displacement after brake",
+                             y = "Displacement (cu.in)",
+                             x = "Weight (1000 lbs)") +
+                        scale_fill_discrete(name = "Miles/(US) gallon") +
+                        theme_minimal() + 
+                        theme(panel.border = element_blank(), 
+                              panel.grid.major = element_blank(),
+                              panel.grid.minor = element_blank(), 
+                              axis.line = element_line(colour = "azure4"),
+                              axis.title = element_text(colour = "azure4"),
+                              axis.text = element_text(colour = "azure4"),
+                              axis.text.x = element_blank(),
+                              plot.title = element_text(colour = "azure4"),
+                              plot.subtitle = element_text(colour = "azure4"),
+                              strip.text = element_text(colour = "azure4"),
+                              legend.text = element_text(colour = "azure4"),
+                              legend.title = element_text(colour = "azure4", face = "bold"),
+                              legend.position = "bottom")
+
+ggplotly(g)        
+```
+
+
+## Thanks
+
