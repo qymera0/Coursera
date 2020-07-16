@@ -1,22 +1,14 @@
 
-library(janeaustenr)
+t <- str_extract(rawDataClean$blog, regex("\\b(\\S+)(?:\\s+\\1\\b)+", TRUE))
 
-# LOAD DATA ---------------------------------------------------------------
+plan(multiprocess)
+
+rawDataClean <-
+        rawData %>%
+        future_map(function(x) rle(x)$value)
+future_map(stri_trans_general, id = "Latin-ASCII")
 
 
-blog <- readLines("dataset/final/en_US/en_US.blogs.txt", 
-                 warn = F,
-                 skipNul = T)
-
-news <- readLines("dataset/final/en_US/en_US.news.txt",
-                 warn = F,
-                 skipNul = T)
-
-twitter <- readLines(file("dataset/final/en_US/en_US.twitter.txt",
-                         open = "rb"),
-                    warn = F,
-                    skipNul = T)
-
-rawTidy <- tidy(rawData)
-
-t <- lexicon::profanity_alvarez
+as_tibble() %>%
+        gather(key = "source") %>%
+        mutate(source = as.factor(source))

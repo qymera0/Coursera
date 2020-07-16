@@ -14,11 +14,11 @@ text-align: justify}
 ```{r LOAD PACKAGES, message=F, warning=F}
 library(tidyverse)
 library(tidytext)
-library(tm)
 library(lexicon)
-library(data.table)
 library(stringr)
-library(stringi)
+library(textclean)
+library(furrr)
+library(qdap)
 ```
 
 
@@ -50,20 +50,13 @@ download.file(url = fileLink,
 unzip("dataset/rawData.zip",
       exdir = "dataset")
 
-# Download profanity data 
-
-download.file("http://www.cs.cmu.edu/~biglou/resources/bad-words.txt", 
-              destfile = "dataset/bad-words.txt", method = "curl")
-
 ```
 
 ### 1.2 Data import
 
 The initial analysis will be focused on English language. The data from three sources (blogs, news and twitter) will be loaded at a list, to be transformed in a Corpus.
 
-In addition, the dataframe with profane words will be constructed, usign all sources from *lexicon* package.
-
-```{r DATA IMPORT}
+```{r DATA IMPORT, message=F, warning=F}
 
 # Import data
 
@@ -81,12 +74,49 @@ rawData <- list(blog = readLines("dataset/final/en_US/en_US.blogs.txt",
 
 closeAllConnections()
 
-# Remove all sequentially duplicated word
+```
 
-rawDataClean <-
-  rawData %>%
-  map(function(x) rle(x)$value) %>%
-  map(stri_trans_general, id = "Latin-ASCII")
+As blog and twitter text data are usually little messy (with a lot of misspellimg words, emoticons, contractions), the package *textclean* will be used to improve the readability of the text. In addition, *qdap* package will be used to check misspelling words.
+
+
+```{r SAMPLE AND CLEAN}
+
+plan(multiprocess, workers = availableCores() - 1)
+
+# Sample and clean
+
+rawSample <-
+        rawData %>%
+        future_map(function (x) {
+          set.seed(123456)
+          sample(x, 20000)}) 
+
+# Check text problems for all sources.
+
+textCheck <-
+  rawSample %>%
+  future_map(check_text)
+
+
+
+        future_map(replace_contraction) %>%
+        future_map(replace_date) %>%
+        future_map(replace_email) %>%
+        future_map(replace_emoticon) %>%
+        future_map(replace_emoji) %>%
+        future_map(replace_hash) %>%
+        future_map(replace_incomplete) %>%
+        future_map(replace_kern) %>%
+        future_map(add_missing_endmark) %>%
+        future_map(add_comma_space) %>%
+        future_map(replace_non_ascii)
+```
+
+Raw data was sample to allow more velocity on posterior EDA and preliminary modeling and was tidified putting all data on a tibble.
+
+In addition, the dataframe with profane words will be constructed, using all sources from *lexicon* package.
+
+```{r PROFANE WORDS}
 
 # Create profane words tibble
 
@@ -100,20 +130,8 @@ profaneWords <-
         gather(key = "lexicon") %>%
         unnest_tokens(word, value) %>%
         distinct(word, .keep_all = T)
-       
-# Sample and tidify data
 
-set.seed(123456)
-
-rawSample <-
-        rawDataClean %>%
-        map(sample, 20000) %>%
-        as_tibble() %>%
-        gather(key = "source") %>%
-        mutate(source = as.factor(source))
 ```
-
-Raw data was sample to allow more velocity on posterior EDA and preliminary modeling and was tidified putting all data on a tibble.
 
 ### 1.3 Data cleaning
 
@@ -159,7 +177,7 @@ The same process to tokenize and cleaning will be used to bi-grams, tri-grams an
 bigrams <-
   rawSample %>%
   unnest_tokens(word, value, token = "ngrams", n = 2) %>%
-  count(word, sort = TRUE) %>%
+  count(source, word, sort = TRUE) %>%
   separate(word, c("word1", "word2"), sep = " ", remove = F) %>%
   filter(!word1 %in% profaneWords$word,
          !word2 %in% profaneWords$word,
