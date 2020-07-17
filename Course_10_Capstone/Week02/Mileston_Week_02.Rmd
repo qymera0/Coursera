@@ -19,6 +19,7 @@ library(stringr)
 library(textclean)
 library(furrr)
 library(stringi)
+library(qdap)
 ```
 
 
@@ -79,7 +80,7 @@ closeAllConnections()
 
 ```
 
-As blog and twitter text data are usually little messy (with a lot of misspellimg words, emoticons, contractions), the package *textclean* will be used to improve the readability of the text. In addition, some specific patterns like numbers, consecutive repeated words and repeteated characters (word elongation) will be removed from text.
+As blog and twitter text data are usually little messy (with a lot of misspelling words, emoticons, contractions), the package *textclean* will be used to improve the readability of the text. In addition, some specific patterns like numbers, consecutive repeated words and repeated characters (word elongation) will be removed from text.
 
 ```{r SAMPLE AND CLEAN, message = F, warning = F}
 
@@ -91,12 +92,12 @@ rawSample <-
           set.seed(123456)
           sample(x, 20000)}) %>%
         map(replace_contraction) %>%
-        map(replace_emoji) %>%
         map(replace_hash) %>%
         map(replace_internet_slang) %>%
         map(replace_url) %>%
         map(replace_non_ascii) %>%
         map(replace_incomplete) %>%
+        map(rm_emoticon, trim = T) %>%
         # Replace accented characters
         map(stri_trans_general, 
             id = "Latin-ASCII") %>%
@@ -108,7 +109,7 @@ rawSample <-
         map(str_remove_all, pattern = "([[:alpha:]])\\1{2,}") %>%
         as_tibble() %>%
         gather(key = "source") %>%
-        mutate(source = as.factor(source))
+        select(-source)
 
 ```
 
@@ -222,24 +223,85 @@ quadgrams <-
 
 #### Uni-grams
 
-```{r UNIGRAMS PLOT}
+```{r UNIGRAMS PLOT, message=F}
 
 unigram %>%
-  arrange(desc(n)) %>%
-  group_by(source) %>%
+  arrange(desc(tf)) %>%
   top_n(15) %>%
-  mutate(word = factor(word, levels = rev(unique(word))))
-  ungroup() %>%
-  ggplot(aes(word, n, fill = source)) +
-  geom_col(show.legend = FALSE) +
-  labs(x = NULL, 
-       y = "Word count",
-       man = "Unigram frequency") + 
-  facet_wrap(~ source, ncol = 3, scales = "free") + 
+  mutate(word = factor(word, levels = rev(unique(word)))) %>% 
+  ggplot(aes(x = word, y = tf)) + 
+  geom_col(show.legend = F) + 
+  labs(x = NULL, y = "Unigram Term Frequency") + 
   coord_flip()
 
 ```
 
+It is possible to see that "time" and "people" are the most frequent unigram from data.
+
+#### bi-grams
+
+```{r BIGRAMS PLOT, message=F}
+
+bigrams %>%
+  arrange(desc(tf)) %>%
+  top_n(15) %>%
+  mutate(word = factor(word, levels = rev(unique(word)))) %>% 
+  ggplot(aes(x = word, y = tf)) + 
+  geom_col(show.legend = F) + 
+  labs(x = NULL, y = "Bigrams Term Frequency") + 
+  coord_flip()
+
+```
+Interesting that most frequent bi-grams are city names: a city from Missouri state and two of them from California. 
+
+#### tri-grams
+
+```{r TRIGRAMS PLOT, message=F}
+
+trigrams %>%
+  arrange(desc(tf)) %>%
+  top_n(15) %>%
+  mutate(word = factor(word, levels = rev(unique(word)))) %>% 
+  ggplot(aes(x = word, y = tf)) + 
+  geom_col(show.legend = F) + 
+  labs(x = NULL, y = "Trigrams Term Frequency") + 
+  coord_flip()
+
+```
+
+Most frequent tri-grams are related to politics and st louis county.
+
+```{r QUADGRAM PLOT, message=F, warning=F}
+
+quadgrams %>%
+  arrange(desc(tf)) %>%
+  top_n(15) %>%
+  mutate(word = factor(word, levels = rev(unique(word)))) %>% 
+  ggplot(aes(x = word, y = tf)) + 
+  geom_col(show.legend = F) + 
+  labs(x = NULL, y = "Quadrgrams Term Frequency") + 
+  coord_flip()
+
+```
+Quadgrams tokenizing show interest results. The value "mat hunter mat hunter" came from one entry having the same value repeated several times. The sequence read poem came from only one entry.
+
+```{r MATT HUNTER}
+
+print(as.character(rawSample %>% filter(str_detect(value, pattern = "matt hunter matt hunter"))))
+
+print(as.character(rawSample %>% filter(str_detect(value, pattern = "read poem"))))
+
+```
+### 2.2 Pairwise correlation
+
+Considering a sample of 20 line sections of all data, it is possible to calculate the pairwise count for all words.
+
+```{r PAIRWISE COUNT}
+
+pairWise <-
+  rawSample
+
+```
 
 
 ## TASK 03: PRELIMINAR MODELING
