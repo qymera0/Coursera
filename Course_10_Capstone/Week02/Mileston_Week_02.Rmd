@@ -20,6 +20,7 @@ library(textclean)
 library(furrr)
 library(stringi)
 library(qdap)
+library(furrr)
 ```
 
 
@@ -86,27 +87,29 @@ As blog and twitter text data are usually little messy (with a lot of misspellin
 
 # Sample and clean
 
+plan(multiprocess)
+
 rawSample <-
         rawData %>%
-        map(function (x) {
+        future_map(function (x) {
           set.seed(123456)
-          sample(x, 20000)}) %>%
-        map(replace_contraction) %>%
-        map(replace_hash) %>%
-        map(replace_internet_slang) %>%
-        map(replace_url) %>%
-        map(replace_non_ascii) %>%
-        map(replace_incomplete) %>%
-        map(rm_emoticon, trim = T) %>%
+          sample(x, 30000)}) %>%
+        future_map(replace_contraction) %>%
+        future_map(replace_hash) %>%
+        future_map(replace_internet_slang) %>%
+        future_map(replace_url) %>%
+        future_map(replace_non_ascii) %>%
+        future_map(replace_incomplete) %>%
+        future_map(rm_emoticon, trim = T) %>%
         # Replace accented characters
-        map(stri_trans_general, 
+        future_map(stri_trans_general, 
             id = "Latin-ASCII") %>%
         # remove consecutive duplicated words
-        map(str_remove_all, pattern = "(\\b\\S+)(?:\\s+\\1\\b)+") %>%
+        future_map(str_remove_all, pattern = "(\\b\\S+)(?:\\s+\\1\\b)+") %>%
         # remove all numbers
-        map(str_remove_all, pattern = "\\d+") %>%
+        future_map(str_remove_all, pattern = "\\d+") %>%
         # remove repeated words
-        map(str_remove_all, pattern = "([[:alpha:]])\\1{2,}") %>%
+        future_map(str_remove_all, pattern = "([[:alpha:]])\\1{2,}") %>%
         as_tibble() %>%
         gather(key = "source") %>%
         select(-source)
@@ -305,3 +308,38 @@ pairWise <-
 
 
 ## TASK 03: PRELIMINAR MODELING
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
