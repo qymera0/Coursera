@@ -19,7 +19,6 @@ library(stringr)
 library(textclean)
 library(furrr)
 library(stringi)
-library(qdap)
 library(furrr)
 ```
 
