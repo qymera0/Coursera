@@ -1,0 +1,269 @@
+---
+title: "Coursera Data Science Capstone - dictionary improvement"
+output: html_notebook
+---
+
+<style>
+body {
+text-align: justify}
+</style>
+
+## 0 LOAD PACKAGES
+
+```{r LOAD PACKAGES, message=F, warning=F}
+library(tidyverse)
+library(tidytext)
+library(lexicon)
+library(stringr)
+library(textclean)
+library(furrr)
+library(stringi)
+library(furrr)
+library(data.table)
+library(tidyr)
+library(scales)
+library(qdap)
+```
+
+## 0 INTRODUCTION
+
+This document presents an attempt for dictionary optimization, in order to determine the minimum amount of data necessary to create the final prediction model. Most part follows the suggestions on https://rpubs.com/BreaizhZut/MilesStone_NgramPrediction, with the difference to use Tidy Text package as much as it possible.
+
+## 1 DATA DOWNLOAD AND READING
+
+The files were downloaded using a link available at Task 0 part of Coursera web site.
+
+```{r DATA DOWLOAD, eval=F, message=F, warning=F}
+
+fileLink <- "https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip"
+
+# Download raw data
+
+download.file(url = fileLink,
+              destfile = "dataset/rawData.zip")
+
+# Extract the file
+
+unzip("dataset/rawData.zip",
+      exdir = "dataset")
+
+```
+
+The analysis will be focused on English language. The data from three sources (blogs, news and twitter) will be loaded at a list, to be transformed in a Corpus.
+
+```{r DATA IMPORT, message=F, warning=F}
+
+# Import data
+
+rawData <- list(blog = readLines("dataset/final/en_US/en_US.blogs.txt", 
+                                 warn = F,
+                                 skipNul = T,
+                                 encoding = "UTF-8"),
+                news = readLines("dataset/final/en_US/en_US.news.txt",
+                                 warn = F,
+                                 skipNul = T,
+                                 encoding = "UTF-8"),
+                twitter = readLines(file("dataset/final/en_US/en_US.twitter.txt",
+                                         open = "rb"),
+                                    warn = F,
+                                    skipNul = T,
+                                    encoding = "UTF-8")
+)
+
+closeAllConnections()
+
+```
+
+## 2 DATA SAMPLING AND CLANING
+
+Three samples of raw data will be constructed and cleaned, considering 0.01%, 0.1%, 1% and 10%. As tibble data structure does not accept unequal length, the samples will be constructed for each source than put together after.
+
+```{r SAMPLING AND CLEANING}
+
+sample_clean <- function(rawData, size = 0.1) {
+  
+  plan(multiprocess)
+  
+  rawData %>%
+        future_map(function (z) {
+          set.seed(123456)
+          sample(z, size = (size*length(z)))}) %>%
+        future_map(replace_contraction) %>%
+        future_map(replace_hash) %>%
+        future_map(replace_internet_slang) %>%
+        future_map(replace_url) %>%
+        future_map(replace_non_ascii) %>%
+        future_map(replace_incomplete) %>%
+        future_map(rm_emoticon, trim = T) %>%
+        # Replace accented characters
+        future_map(stri_trans_general, 
+            id = "Latin-ASCII") %>%
+        # remove consecutive duplicated words
+        future_map(str_remove_all, pattern = "(\\b\\S+)(?:\\s+\\1\\b)+") %>%
+        # remove all numbers
+        future_map(str_remove_all, pattern = "\\d+") %>%
+        # remove repeated words
+        future_map(str_remove_all, pattern = "([[:alpha:]])\\1{2,}") %>%
+        # remove underscores
+        future_map(str_remove_all, pattern = "_") %>%
+        future_map(as_tibble) %>% 
+        bind_rows(.id = "Source")
+  
+}
+
+rawSample001 <- sample_clean(rawData, size = 0.0001)
+
+rawSample01 <- sample_clean(rawData, size = 0.001)
+
+rawSample1 <- sample_clean(rawData, size = 0.01)
+
+rawSample10 <- sample_clean(rawData, size = 0.1)
+
+```
+
+In addition, the dataframe with profane words will be constructed, using all sources from *lexicon* package.
+
+```{r PROFANE WORDS}
+
+# Create profane words tibble
+
+profaneWords <- 
+        list(alvarez = toString(profanity_alvarez),
+             arr_bad = toString(profanity_arr_bad),
+             banned = toString(profanity_banned),
+             racist = toString(profanity_racist),
+             zac = toString(profanity_zac_anger)) %>%
+        as_tibble() %>%
+        gather(key = "lexicon") %>%
+        unnest_tokens(word, value) %>%
+        distinct(word, .keep_all = T)
+
+```
+
+## 3 COMPARING SOURCES
+
+At this section, the three sources (blog, news and twitter) will be compared, first by word frequency, than using Zipf’s Law and tf-idf calculations. The framework can found at https://www.tidytextmining.com/index.html.
+
+For the calculations, the 10% Sample will be used.
+
+```{r WORD FREQUENCY, message=F, warning=F}
+
+unigram <-
+        rawSample10 %>%
+        unnest_tokens(word, value) %>%
+        anti_join(profaneWords) %>%
+        anti_join(stop_words) %>%
+        count(Source, word, sort = T)
+
+totalWords <-
+        unigram %>% 
+        group_by(Source) %>% 
+        summarise(total = sum(n))
+
+unigram <- 
+       left_join(unigram, totalWords) %>%
+       mutate(p = n / total) %>%
+       group_by(Source) %>% 
+       mutate(rank = row_number())
+
+freq <-
+       unigram %>%
+       select(-rank) %>% 
+       spread(Source, p) %>%  
+       gather(Source, p, `news`:`twitter`)
+      
+       
+```
+
+With the word frequency, it is possible to plot the correlation between sources.
+
+```{r PLOT CORRELATIONS, message = F, warning = F}
+
+ggplot(freq, aes(x = p, y = blog, color = abs(blog - p))) +
+  geom_abline(color = "gray40", lty = 2) + 
+  geom_jitter(alpha = 0.1, size = 2.5, width = 0.3, height = 0.3) +
+  geom_text(aes(label = word), check_overlap = TRUE, vjust = 1.5) +
+  scale_x_log10(labels = percent_format()) +
+  scale_y_log10(labels = percent_format()) +
+  scale_color_gradient(limits = c(0, 0.001), low = "darkslategray4", high = "gray75") +
+  facet_wrap(~Source, ncol = 2) +
+  theme(legend.position="none") +
+  labs(y = "Blog ", x = NULL)
+
+```
+
+With the tokenized data, it is possible to analyze the Zipf’s Law.
+
+```{r ZIPFS LAW}
+
+freqRank <-
+  unigram %>%
+  group_by(Source) %>% 
+  mutate(rank = row_number(),
+         `termFreq` = n/total)
+
+freqRank %>% 
+  ggplot(aes(rank, `termFreq`, color = Source)) + 
+  geom_line(size = 1.1, alpha = 0.8, show.legend = T) + 
+  scale_x_log10() +
+  scale_y_log10()
+
+```
+Blog and news tend to presents similar words between rank 1e01 and 1e10. Maybe it will be possible to put together both sources and sample again. Twitter has its own words, tends to equal the other group only after rank 1e03. Let’s determine would be the fitted power law between rank 600 and 1e04.
+
+```{r FIT POWER LAW}
+
+rankSub <- freqRank %>% 
+  filter(rank < 1000,
+         rank > 100)
+
+pLaw <- lm(log10(termFreq) ~ log10(rank), data = rankSub)
+
+pLaw
+
+```
+
+```{r PLOT POWER LINE}
+
+rankSub %>% 
+  ggplot(aes(rank, termFreq, color = Source)) + 
+  geom_abline(intercept = pLaw$coefficients[[1]], slope = pLaw$coefficients[[2]], color = "gray50", linetype = 2) +
+  geom_line(size = 1.1, alpha = 0.8, show.legend = TRUE) + 
+  scale_x_log10() +
+  scale_y_log10()
+
+```
+Twitter data is consistently different from blog and news, mainly until rank < 300. Probably. whole twitter database will be used to create the dictionary.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

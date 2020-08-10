@@ -1,0 +1,344 @@
+---
+title: "Coursera HJ Data Science Capstone Week 02"
+author: "Samuel Bozzi Baco"
+output: html_notebook
+---
+
+<style>
+body {
+text-align: justify}
+</style>
+
+## LOAD PACKAGES
+
+```{r LOAD PACKAGES, message=F, warning=F}
+library(tidyverse)
+library(tidytext)
+library(lexicon)
+library(stringr)
+library(textclean)
+library(furrr)
+library(stringi)
+library(furrr)
+```
+
+
+## INTRODUCTION
+
+This document presents the code and analysis for tasks 1 (get and cleaning data), 2 (exploratory data analysis), all of them related to the capstone project from John´s Hopkins data science program.
+
+The project is related to build a key that takes a (or more than 1)  word written by the user and (using ML prediction) suggest the next key.
+
+Differently from suggested, instead of *tm* package, the *tidytext* approach will be used, mainly based on Julia Silge and David Robinson book “Text Mining with R: a Tidy approach”, delivered by Bookdown site (https://bookdown.org/)
+
+## TASK 01: GETTING AND CLEANING THE DATA
+
+### 1.1 Data download
+
+The files were downloaded using a link available at Task 0 part of Coursera web site.
+
+```{r DATA DOWLOAD, eval=F, message=F, warning=F}
+
+fileLink <- "https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip"
+
+# Download raw data
+
+download.file(url = fileLink,
+              destfile = "dataset/rawData.zip")
+
+# Extract the file
+
+unzip("dataset/rawData.zip",
+      exdir = "dataset")
+
+```
+
+### 1.2 Data import and cleaning
+
+The initial analysis will be focused on English language. The data from three sources (blogs, news and twitter) will be loaded at a list, to be transformed in a Corpus.
+
+```{r DATA IMPORT, message=F, warning=F}
+
+# Import data
+
+rawData <- list(blog = readLines("dataset/final/en_US/en_US.blogs.txt", 
+                                 warn = F,
+                                 skipNul = T,
+                                 encoding = "UTF-8"),
+                news = readLines("dataset/final/en_US/en_US.news.txt",
+                                 warn = F,
+                                 skipNul = T,
+                                 encoding = "UTF-8"),
+                twitter = readLines(file("dataset/final/en_US/en_US.twitter.txt",
+                                         open = "rb"),
+                                    warn = F,
+                                    skipNul = T,
+                                    encoding = "UTF-8")
+)
+
+closeAllConnections()
+
+```
+
+As blog and twitter text data are usually little messy (with a lot of misspelling words, emoticons, contractions), the package *textclean* will be used to improve the readability of the text. In addition, some specific patterns like numbers, consecutive repeated words and repeated characters (word elongation) will be removed from text.
+
+```{r SAMPLE AND CLEAN, message = F, warning = F}
+
+# Sample and clean
+
+plan(multiprocess)
+
+rawSample <-
+        rawData %>%
+        future_map(function (x) {
+          set.seed(123456)
+          sample(x, 30000)}) %>%
+        future_map(replace_contraction) %>%
+        future_map(replace_hash) %>%
+        future_map(replace_internet_slang) %>%
+        future_map(replace_url) %>%
+        future_map(replace_non_ascii) %>%
+        future_map(replace_incomplete) %>%
+        future_map(rm_emoticon, trim = T) %>%
+        # Replace accented characters
+        future_map(stri_trans_general, 
+            id = "Latin-ASCII") %>%
+        # remove consecutive duplicated words
+        future_map(str_remove_all, pattern = "(\\b\\S+)(?:\\s+\\1\\b)+") %>%
+        # remove all numbers
+        future_map(str_remove_all, pattern = "\\d+") %>%
+        # remove repeated words
+        future_map(str_remove_all, pattern = "([[:alpha:]])\\1{2,}") %>%
+        as_tibble() %>%
+        gather(key = "source") %>%
+        select(-source)
+
+```
+
+Raw data was sample to allow more velocity on posterior EDA and preliminary modeling and was tidified putting all data on a tibble.
+
+In addition, the dataframe with profane words will be constructed, using all sources from *lexicon* package.
+
+```{r PROFANE WORDS}
+
+# Create profane words tibble
+
+profaneWords <- 
+        list(alvarez = toString(profanity_alvarez),
+             arr_bad = toString(profanity_arr_bad),
+             banned = toString(profanity_banned),
+             racist = toString(profanity_racist),
+             zac = toString(profanity_zac_anger)) %>%
+        as_tibble() %>%
+        gather(key = "lexicon") %>%
+        unnest_tokens(word, value) %>%
+        distinct(word, .keep_all = T)
+
+```
+
+### 1.3 Tokenize
+
+The cleaning process will have this steps:
+
+* Tokenize sources,
+* remove profane words,
+* remove stop words,
+
+```{r DATA CLEANING, message=F, warning=T}
+
+# Tokenize data
+
+unigram <-
+        rawSample %>%
+        unnest_tokens(word, value) %>%
+        anti_join(profaneWords) %>%
+        anti_join(stop_words) %>%
+        count(word, sort = T) %>%
+        mutate(total = sum(n),
+               tf = n/sum(n))
+
+```
+
+The same process to tokenize and cleaning will be used to bi-grams, tri-grams and quad-grams.
+
+```{r N-GRAMS, message=F}
+
+# bi-grams
+
+bigrams <-
+  rawSample %>%
+  unnest_tokens(word, value, token = "ngrams", n = 2) %>%
+  count(word, sort = TRUE) %>%
+  separate(word, c("word1", "word2"), sep = " ", remove = F) %>%
+  filter(!word1 %in% stop_words$word) %>%
+  filter(!word2 %in% stop_words$word) %>%
+  filter(!word1 %in% profaneWords$word) %>%
+  filter(!word2 %in% profaneWords$word) %>%
+  mutate(total = sum(n),
+         tf = n/sum(n))
+
+# tri-gram
+
+trigrams <-
+  rawSample %>%
+  unnest_tokens(word, value, token = "ngrams", n = 3) %>%
+  count(word, sort = TRUE) %>%
+  separate(word, 
+           c("word1", "word2", "word3"), 
+           sep = " ", 
+           remove = F) %>%
+  filter(!word1 %in% stop_words$word) %>%
+  filter(!word2 %in% stop_words$word) %>%
+  filter(!word3 %in% stop_words$word) %>%
+  filter(!word1 %in% profaneWords$word) %>%
+  filter(!word2 %in% profaneWords$word) %>%
+  filter(!word3 %in% profaneWords$word) %>%
+  mutate(total = sum(n),
+         tf = n/sum(n))
+
+# quad-gram
+
+quadgrams <-
+  rawSample %>%
+  unnest_tokens(word, value, token = "ngrams", n = 4) %>%
+  count(word, sort = TRUE) %>%
+  separate(word, 
+           c("word1", "word2", "word3", "word4"), 
+           sep = " ", 
+           remove = F) %>%
+  filter(!word1 %in% stop_words$word) %>%
+  filter(!word2 %in% stop_words$word) %>%
+  filter(!word3 %in% stop_words$word) %>%
+  filter(!word4 %in% stop_words$word) %>%
+  filter(!word1 %in% profaneWords$word) %>%
+  filter(!word2 %in% profaneWords$word) %>%
+  filter(!word3 %in% profaneWords$word) %>%
+  filter(!word4 %in% profaneWords$word) %>%
+  mutate(total = sum(n),
+         tf = n/sum(n))
+
+```
+
+## TASK 02: EXPLORATORY DATA ANALYSIS
+
+### 2.1 Ploting n-grams frequency
+
+#### Uni-grams
+
+```{r UNIGRAMS PLOT, message=F}
+
+unigram %>%
+  arrange(desc(tf)) %>%
+  top_n(15) %>%
+  mutate(word = factor(word, levels = rev(unique(word)))) %>% 
+  ggplot(aes(x = word, y = tf)) + 
+  geom_col(show.legend = F) + 
+  labs(x = NULL, y = "Unigram Term Frequency") + 
+  coord_flip()
+
+```
+
+It is possible to see that "time" and "people" are the most frequent unigram from data.
+
+#### bi-grams
+
+```{r BIGRAMS PLOT, message=F}
+
+bigrams %>%
+  arrange(desc(tf)) %>%
+  top_n(15) %>%
+  mutate(word = factor(word, levels = rev(unique(word)))) %>% 
+  ggplot(aes(x = word, y = tf)) + 
+  geom_col(show.legend = F) + 
+  labs(x = NULL, y = "Bigrams Term Frequency") + 
+  coord_flip()
+
+```
+Interesting that most frequent bi-grams are city names: a city from Missouri state and two of them from California. 
+
+#### tri-grams
+
+```{r TRIGRAMS PLOT, message=F}
+
+trigrams %>%
+  arrange(desc(tf)) %>%
+  top_n(15) %>%
+  mutate(word = factor(word, levels = rev(unique(word)))) %>% 
+  ggplot(aes(x = word, y = tf)) + 
+  geom_col(show.legend = F) + 
+  labs(x = NULL, y = "Trigrams Term Frequency") + 
+  coord_flip()
+
+```
+
+Most frequent tri-grams are related to politics and st louis county.
+
+```{r QUADGRAM PLOT, message=F, warning=F}
+
+quadgrams %>%
+  arrange(desc(tf)) %>%
+  top_n(15) %>%
+  mutate(word = factor(word, levels = rev(unique(word)))) %>% 
+  ggplot(aes(x = word, y = tf)) + 
+  geom_col(show.legend = F) + 
+  labs(x = NULL, y = "Quadrgrams Term Frequency") + 
+  coord_flip()
+
+```
+Quadgrams tokenizing show interest results. The value "mat hunter mat hunter" came from one entry having the same value repeated several times. The sequence read poem came from only one entry.
+
+```{r MATT HUNTER}
+
+print(as.character(rawSample %>% filter(str_detect(value, pattern = "matt hunter matt hunter"))))
+
+print(as.character(rawSample %>% filter(str_detect(value, pattern = "read poem"))))
+
+```
+### 2.2 Pairwise correlation
+
+Considering a sample of 20 line sections of all data, it is possible to calculate the pairwise count for all words.
+
+```{r PAIRWISE COUNT}
+
+pairWise <-
+  rawSample
+
+```
+
+
+## TASK 03: PRELIMINAR MODELING
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
