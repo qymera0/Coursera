@@ -7,7 +7,9 @@ body {
 text-align: justify}
 </style>
 
-This document aims to describe the word prediction model creation. This model will futher be implemented on a Shiny App.
+This document aims to describe the word prediction model creation. This model will futher be implemented on a Shiny App. 
+
+This model is based on work from Thiloshon Nagarajah (https://thiloshon.wordpress.com/2018/03/11/build-your-own-word-sentence-prediction-application-part-02/).
 
 ## 0 LOAD PACKAGES
 
@@ -50,7 +52,7 @@ The analysis will be focused on English language. The data from three sources (b
 
 # Import data
 
-setwd("~/Google Drive/Data Science/Learning/Coursera/Course_10_Capstone")
+setwd("~/R/Learning/Coursera/Course_10_Capstone")
 
 rawData <- list(blog = readLines("dataset/final/en_US/en_US.blogs.txt", 
                                  warn = F,
@@ -184,6 +186,8 @@ trigrams <-
 
 ```
 
+## 4 KNESER-NEY SMOTHING
+
 With the tokens, it is possible to apply the Kneser-Ney smother, so the probabilities for each word, depending of the history, is estimated.
 
 ```{r KNESER-NEY, message=F, warning=F}
@@ -247,9 +251,124 @@ triKn <-
   trigrams %>%
   left_join(n1w12) %>%
   left_join(select(biKn, biProb, word1, word2), by = c("word1", "word2")) %>%
-  mutate(Prob = (n.tri - discValue) / Cn2 + discValue / Cn2 * N * biProb)
+  mutate(triProb = (n.tri - discValue) / Cn2 + discValue / Cn2 * N * biProb)
 
 ```
+
+## 5 PREDICTION APP
+
+The first function is to predict the third word, given previous two.
+
+```{r PREDICT TRIGRAMS}
+
+tri_fun <- function(w1, w2, n = 5){
+  
+  require(dplyr)
+  
+  pwords <-
+    triKn %>%
+    filter(word1 == w1) %>%
+    filter(word2 == w2) %>%
+    arrange(desc(triProb))
+  
+  if (any(is.na(pwords)))
+    
+    return(bi_fun(w2, n)) # backoff to bi-grams prediction
+  
+  if (nrow(pwords) > n)
+    
+    return(pwords %>% top(n) %>% select(word3)) # propose 5 options
+           
+  count <- nrow(pwords)
+  
+  bwords <- 
+    bi_fun(w2, n) %>%
+    top(n - count)
+  
+  return(c(pwords[ , word3], bwords))
+  
+}
+
+```
+
+If we don’t find a tri-gram with the two given words, we backoff to the bi-gram. We find the next word given one previous word.
+
+The backoff algorithm is linked inside each prediction functions
+
+```{r PREDICT BIGRAMS}
+
+bi_fun <- function(w1, n = 5){
+  
+    require(dplyr)  
+  
+    pwords <-
+      biKn %>%
+      filter(word1 == w1) %>%
+      arrange(desc(biProb))
+    
+    if (any(is.na(pwords)))
+    
+          return(uni_fun(n))
+    
+    if (nrow(pwords) > n)
+    
+          return(pwords %>% top(n) %>% select(word2))
+    
+    count <- nrow(pwords)
+    
+    unWords <- 
+      uni_fun(n) %>%
+      top(n - count)
+    
+    return(c(pwords[ , word_2], unWords))
+    
+}
+
+```
+
+If we couldn’t even find the corresponding bi-gram, we randomly get a word from unigrams with high probability. This is the last resort for n-grams that are not found in the dataset.
+
+```{r PREDICT UNIGRAM}
+
+uni_fun <- function(n = 5){
+  
+    return(sample(unigram[ , word], size = n))
+  
+}
+
+```
+
+Finally, a function to bind all these.
+
+```{r APP}
+
+getWords <- function(str){
+    
+    
+  
+    require(quanteda)
+    
+    tokens <- tokens(x = char_tolower(str))
+    
+    tokens <- char_wordstem(rev(rev(tokens[[1]])[1:2]), language = "english")
+    
+    words <- tri_fun(tokens[1], tokens[2], 5)
+    
+    chain_1 <- paste(tokens[1], tokens[2], words[1], sep = " ")
+
+    print(words[1])
+}
+
+```
+
+
+
+
+
+
+
+
+
 
 
 
