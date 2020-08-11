@@ -19,13 +19,9 @@ library(stringr)
 library(textclean)
 library(furrr)
 library(stringi)
-library(furrr)
-library(data.table)
 library(tidyr)
-library(scales)
 library(qdap)
 library(SnowballC)
-library(data.table)
 ```
 
 ## 1 DATA DOWNLOAD AND READING
@@ -54,7 +50,7 @@ The analysis will be focused on English language. The data from three sources (b
 
 # Import data
 
-setwd("~/R/Learning/Coursera/Course_10_Capstone")
+setwd("~/Google Drive/Data Science/Learning/Coursera/Course_10_Capstone")
 
 rawData <- list(blog = readLines("dataset/final/en_US/en_US.blogs.txt", 
                                  warn = F,
@@ -116,13 +112,7 @@ sample_clean <- function(rawData, size = 0.1) {
   
 }
 
-rawSample001 <- sample_clean(rawData, size = 0.0001)
-
-rawSample01 <- sample_clean(rawData, size = 0.001)
-
 rawSample1 <- sample_clean(rawData, size = 0.01)
-
-rawSample10 <- sample_clean(rawData, size = 0.1)
 
 ```
 
@@ -158,14 +148,12 @@ unigram <-
         anti_join(profaneWords) %>%
         anti_join(stop_words) %>%
         mutate(word = wordStem(word, language = "english")) %>%
-        count(word, sort = T) %>%
-        mutate(tf = n/sum(n))
+        count(word, sort = T, name = "n.uni") 
 
 bigrams <-
         rawSample1 %>%
         select(-Source) %>%
         unnest_tokens(word, value, token = "ngrams", n = 2) %>%
-        count(word, sort = TRUE) %>%
         separate(word, c("word1", "word2"), sep = " ", remove = F) %>%
         filter(!word1 %in% stop_words$word) %>%
         filter(!word2 %in% stop_words$word) %>%
@@ -173,13 +161,12 @@ bigrams <-
         filter(!word2 %in% profaneWords$word) %>%
         mutate(word1 = wordStem(word1, language = "english"),
                word2 = wordStem(word2, language = "english")) %>%
-        mutate(tf = n/sum(n))
+        count(word1, word2, sort = TRUE, name = "n.bi")
 
 trigrams <-
         rawSample1 %>%
         select(-Source) %>%
         unnest_tokens(word, value, token = "ngrams", n = 3) %>%
-        count(word, sort = TRUE) %>%
         separate(word, 
                 c("word1", "word2", "word3"), 
                 sep = " ", 
@@ -193,13 +180,13 @@ trigrams <-
         mutate(word1 = wordStem(word1, language = "english"),
                word2 = wordStem(word2, language = "english"),
                word3 = wordStem(word3, language = "english")) %>%
-        mutate(tf = n/sum(n))
+        count(word1, word2, word3, sort = TRUE, name = "n.tri")
 
 ```
 
 With the tokens, it is possible to apply the Kneser-Ney smother, so the probabilities for each word, depending of the history, is estimated.
 
-```{r KNESER-NEY}
+```{r KNESER-NEY, message=F, warning=F}
 
 discValue <- 0.75
 
@@ -208,7 +195,7 @@ discValue <- 0.75
 ckn <-
   bigrams %>%
   count(word2, sort = TRUE) %>%
-  mutate(p.word2 = n/sum(n)) %>%
+  mutate(uniProb = n/sum(n)) %>%
   select(-n) %>%
   rename("word" = "word2")
 
@@ -217,19 +204,50 @@ ckn <-
 unigram <-
   unigram %>%
   left_join(ckn) %>%
-  filter(!is.na(p.word2))
+  filter(!is.na(uniProb))
 
 # Count a word that occurs as first word at a bi-gram
 
 n1wi <-
   bigrams %>%
-  count(word1, sort = T)
+  count(word1, sort = T, name = "N")
 
-# Assigning total times word 1 occurred to bi-gram cn1
+# Assigning total times word 1 occurred to bi-grams 
 
-bigram <-
-  bigram %>%
-  
+bigrams <-
+  bigrams %>%
+  left_join(unigram, by = c("word1" = "word")) %>%
+  rename("Cn1" = "n.uni") %>%
+  select(-uniProb)
+
+# Kneser Ney Smothing Algorithm for bi-Grams
+
+biKn <-
+  bigrams %>%
+  left_join(n1wi) %>%
+  left_join(unigram, by = c("word2" = "word")) %>%
+  mutate(biProb = (n.bi - discValue) / Cn1 + discValue / Cn1 * N * uniProb)
+
+# Finding count of word1-word2 combination in bi-grams
+
+trigrams <-
+  trigrams %>%
+  left_join(select(bigrams, word1, word2, n.bi), by = c("word1", "word2")) %>%
+  rename("Cn2" = "n.bi")
+
+# Finding count of word1-word2 combination in tri-grams
+
+n1w12 <-
+  trigrams %>%
+  count(word1, word2, sort = T, name = "N")
+
+#Kneser Ney Smothing for Tri-grams
+
+triKn <-
+  trigrams %>%
+  left_join(n1w12) %>%
+  left_join(select(biKn, biProb, word1, word2), by = c("word1", "word2")) %>%
+  mutate(Prob = (n.tri - discValue) / Cn2 + discValue / Cn2 * N * biProb)
 
 ```
 

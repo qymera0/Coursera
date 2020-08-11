@@ -10,9 +10,9 @@ plan(multiprocess)
 
 sample <-
         rawData %>%
-        map(function (z, size = 0.01) {
-            set.seed(123456)
-            sample(z, size = (size*length(z)))})
+        future_map(function (z, size = 0.01) {
+                     set.seed(123456)
+                     sample(z, size = (size*length(z)))})
         
         
 master_vector <- c(sample$blog, sample$news, sample$twitter)
@@ -113,8 +113,6 @@ uni_words <- uni_words[!is.na(uni_words$Prob)]
 
 n1wi2 <- bi_words[, .(N = .N), by = word_1]
 
-
-
 setkey(n1wi2, word_1)
 
 # Assigning total times word 1 occured to bigram cn1
@@ -123,17 +121,21 @@ bi_words[, Cn1 := uni_words[word_1, count]]
 
 # Kneser-Ney Algorithm
 
-bi_words[, Prob := ((count - discount_value) / Cn1 + discount_value / Cn1 * n1wi[word_1, N] * uni_words[word_2, Prob])]
+bi_words[, Prob := ((count - discount_value) / Cn1 + discount_value / Cn1 * n1wi2[word_1, N] * uni_words[word_2, Prob])]
 
 ######## Finding Tri-Gram Probability #################
 
 # Finding count of word1-word2 combination in bigram 
 
+keycols <- c("word_1", "word_2")
+
+setkeyv(bi_words, cols = keycols)
+
 tri_words[, Cn2 := bi_words[.(word_1, word_2), count]]
 
 # Finding count of word1-word2 combination in trigram
 
-n1w12 <- tri_words[, .N, by = .(word_1, word_2)]
+n1w122 <- tri_words[, .N, by = .(word_1, word_2)]
 
 setkey(n1w12, word_1, word_2)
 
