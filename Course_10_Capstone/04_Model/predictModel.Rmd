@@ -148,7 +148,7 @@ unigram <-
         select(-Source) %>%
         unnest_tokens(word, value) %>%
         anti_join(profaneWords) %>%
-        anti_join(stop_words) %>%
+        #anti_join(stop_words) %>%
         mutate(word = wordStem(word, language = "english")) %>%
         count(word, sort = T, name = "n.uni") 
 
@@ -157,8 +157,8 @@ bigrams <-
         select(-Source) %>%
         unnest_tokens(word, value, token = "ngrams", n = 2) %>%
         separate(word, c("word1", "word2"), sep = " ", remove = F) %>%
-        filter(!word1 %in% stop_words$word) %>%
-        filter(!word2 %in% stop_words$word) %>%
+        #filter(!word1 %in% stop_words$word) %>%
+        #filter(!word2 %in% stop_words$word) %>%
         filter(!word1 %in% profaneWords$word) %>%
         filter(!word2 %in% profaneWords$word) %>%
         mutate(word1 = wordStem(word1, language = "english"),
@@ -173,9 +173,9 @@ trigrams <-
                 c("word1", "word2", "word3"), 
                 sep = " ", 
                 remove = F) %>%
-        filter(!word1 %in% stop_words$word) %>%
-        filter(!word2 %in% stop_words$word) %>%
-        filter(!word3 %in% stop_words$word) %>%
+        #filter(!word1 %in% stop_words$word) %>%
+        #filter(!word2 %in% stop_words$word) %>%
+        #filter(!word3 %in% stop_words$word) %>%
         filter(!word1 %in% profaneWords$word) %>%
         filter(!word2 %in% profaneWords$word) %>%
         filter(!word3 %in% profaneWords$word) %>%
@@ -267,17 +267,20 @@ tri_fun <- function(w1, w2, n = 5){
   
   pwords <-
     triKn %>%
-    filter(word1 == w1) %>%
-    filter(word2 == w2) %>%
-    arrange(desc(triProb))
+    filter(word1 == as.character(w1)) %>%
+    filter(word2 == as.character(w2))
   
-  if (any(is.na(pwords)))
+  if (dim(pwords)[1] == 0)
     
-    return(bi_fun(w2, n)) # backoff to bi-grams prediction
+    # backoff to bi-grams prediction
+    
+    return(bi_fun(w2, n)) 
   
   if (nrow(pwords) > n)
     
-    return(pwords %>% top(n) %>% select(word3)) # propose 5 options
+    return(as.character(pwords %>% 
+                             arrange(-biProb) %>% 
+                             filter(row_number() <= n)$word2)) # propose 5 options
            
   count <- nrow(pwords)
   
@@ -299,41 +302,54 @@ The backoff algorithm is linked inside each prediction functions
 
 bi_fun <- function(w1, n = 5){
   
-    require(dplyr)  
+  require(dplyr)
   
-    pwords <-
+  pwords <-
       biKn %>%
-      filter(word1 == w1) %>%
-      arrange(desc(biProb))
+      filter(word1 == as.character(w1))
+
+  if(dim(pwords)[1] == 0){
+        
+        # Return a word weight by its probability from uni-grams
+      
+        return(uni_fun())
+        
+  } 
     
-    if (any(is.na(pwords)))
+  if(nrow(pwords) > n){
+      
+      # Return only words from bi-gram
+        
+       return(as.character(pwords %>% 
+                           arrange(-biProb) %>% 
+                           filter(row_number() <= n)$word2))
+        
+  }
+
+  # If the number of words is smaller than n, the function return all 
+  # from bi-gram than completes from uni-gram data.
     
-          return(uni_fun(n))
+  count <- nrow(pwords)
+
+  unWords <- uni_fun()[1:n-count]
     
-    if (nrow(pwords) > n)
-    
-          return(pwords %>% top(n) %>% select(word2))
-    
-    count <- nrow(pwords)
-    
-    unWords <- 
-      uni_fun(n) %>%
-      top(n - count)
-    
-    return(c(pwords[ , word_2], unWords))
+  return(c(pwords$word2, unWords))
     
 }
 
 ```
 
-If we couldn’t even find the corresponding bi-gram, we randomly get a word from unigrams with high probability. This is the last resort for n-grams that are not found in the dataset.
+If we could not even find the corresponding word from bi-gram, we randomly get a "n" words from uni-gram. The sample is made considering the word probability. This is the last resort for n-grams that are not found in the dataset.
 
 ```{r PREDICT UNIGRAM}
 
 uni_fun <- function(n = 5){
-  
-    return(sample(unigram[ , word], size = n))
-  
+        
+        # The function return "size" words, weighted by the probability of 
+        # happening.
+        
+        return(sample(unigram$word, size = n, prob = unigram$uniProb))
+        
 }
 
 ```
@@ -344,17 +360,21 @@ Finally, a function to bind all these.
 
 getWords <- function(str){
     
+    require(tidytext)
+    require(dplyr)
+    require(SnowballC)
     
-  
-    require(quanteda)
+    tokens <-
+        str %>%
+        as.tibble() %>%
+        bind_rows() %>%
+        unnest_tokens(word, value) %>%
+        mutate(word = wordStem(word, language = "english"))
+      
     
-    tokens <- tokens(x = char_tolower(str))
+    words <- tri_fun(tokens[1,1], tokens[2,1], 5)
     
-    tokens <- char_wordstem(rev(rev(tokens[[1]])[1:2]), language = "english")
-    
-    words <- tri_fun(tokens[1], tokens[2], 5)
-    
-    chain_1 <- paste(tokens[1], tokens[2], words[1], sep = " ")
+    chain1 <- paste(tokens[1,1], tokens[2,1], words[1], sep = " ")
 
     print(words[1])
 }
