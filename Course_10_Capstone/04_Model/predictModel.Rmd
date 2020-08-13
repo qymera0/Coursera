@@ -262,35 +262,44 @@ The first function is to predict the third word, given previous two.
 ```{r PREDICT TRIGRAMS}
 
 tri_fun <- function(w1, w2, n = 5){
-  
-  require(dplyr)
-  
-  pwords <-
-    triKn %>%
-    filter(word1 == as.character(w1)) %>%
-    filter(word2 == as.character(w2))
-  
-  if (dim(pwords)[1] == 0)
-    
-    # backoff to bi-grams prediction
-    
-    return(bi_fun(w2, n)) 
-  
-  if (nrow(pwords) > n)
-    
-    return(as.character(pwords %>% 
-                             arrange(-biProb) %>% 
-                             filter(row_number() <= n)$word2)) # propose 5 options
-           
-  count <- nrow(pwords)
-  
-  bwords <- 
-    bi_fun(w2, n) %>%
-    top(n - count)
-  
-  return(c(pwords[ , word3], bwords))
-  
+        
+        require(dplyr)
+        
+        pwords <-
+                triKn %>%
+                filter(word1 == as.character(w1)) %>%
+                filter(word2 == as.character(w2))
+        
+        if (dim(pwords)[1] == 0){
+                
+                # backoff to bi-grams prediction
+                
+                return(bi_fun(w2, n))
+                #return(print("bi_fun"))
+        }
+        
+        if (nrow(pwords) > n){
+                
+                # Return only words from tri-gram
+                
+                p <- 
+                        pwords %>% 
+                        arrange(-triProb) %>%
+                        select(word3) %>%
+                        filter(row_number() <= n)
+                
+                return(p$word3)
+                                
+        }
+        
+        count <- nrow(pwords)
+        
+        bwords <- bi_fun(w2, n)[1:(n - count)]
+        
+        return(c(pwords$word3, bwords))
+        
 }
+
 
 ```
 
@@ -300,42 +309,45 @@ The backoff algorithm is linked inside each prediction functions
 
 ```{r PREDICT BIGRAMS}
 
-bi_fun <- function(w1, n = 5){
-  
-  require(dplyr)
-  
-  pwords <-
-      biKn %>%
-      filter(word1 == as.character(w1))
-
-  if(dim(pwords)[1] == 0){
+bi_fun <- function(w2, n = 5){
         
-        # Return a word weight by its probability from uni-grams
-      
-        return(uni_fun())
+        pwords <-
+                biKn %>%
+                filter(word1 == as.character(w2))
         
-  } 
-    
-  if(nrow(pwords) > n){
-      
-      # Return only words from bi-gram
+        if(dim(pwords)[1] == 0){
+                
+                # Return a word weight by its probability from uni-grams
+                
+                return(uni_fun(n))
+                
+        } 
         
-       return(as.character(pwords %>% 
-                           arrange(-biProb) %>% 
-                           filter(row_number() <= n)$word2))
+        if(nrow(pwords) > n){
+                
+                # Return only words from bi-gram
+                
+                p <-
+                        pwords %>% 
+                        arrange(-biProb) %>%
+                        select(word2) %>%               
+                        filter(row_number() <= n)
+                
+                return(p$word2)
+                
+        }
         
-  }
-
-  # If the number of words is smaller than n, the function return all 
-  # from bi-gram than completes from uni-gram data.
-    
-  count <- nrow(pwords)
-
-  unWords <- uni_fun()[1:n-count]
-    
-  return(c(pwords$word2, unWords))
-    
+        # If the number of words is smaller than n, the function return all 
+        # from bi-gram than completes from uni-gram data.
+        
+        count <- nrow(pwords)
+        
+        unWords <- uni_fun()[1:n-count]
+        
+        return(c(pwords$word2, unWords))
+        
 }
+
 
 ```
 
@@ -343,12 +355,13 @@ If we could not even find the corresponding word from bi-gram, we randomly get a
 
 ```{r PREDICT UNIGRAM}
 
-uni_fun <- function(n = 5){
+uni_fun <- function(size = 5){
         
         # The function return "size" words, weighted by the probability of 
         # happening.
         
-        return(sample(unigram$word, size = n, prob = unigram$uniProb))
+        return(sample(unigram$word, 
+                      size = size, prob = unigram$uniProb))
         
 }
 
@@ -365,22 +378,50 @@ getWords <- function(str){
     require(SnowballC)
     
     tokens <-
-        str %>%
-        as.tibble() %>%
-        bind_rows() %>%
-        unnest_tokens(word, value) %>%
-        mutate(word = wordStem(word, language = "english"))
+          str %>%
+          as_tibble() %>%
+          bind_rows() %>%
+          unnest_tokens(word, value) %>%
+          mutate(word = wordStem(word, language = "english")) %>%
+          arrange(-row_number()) %>%
+          filter(row_number() <= 2) %>%
+          arrange(-row_number())
+    
+    if(dim(tokens)[1] < 2){
       
+      words <- bi_fun(tokens[1,1])
+      
+      return(print(words))
+      
+    }else{
+      
+      words <- tri_fun(tokens[1,1], tokens[2,1], 5)
     
-    words <- tri_fun(tokens[1,1], tokens[2,1], 5)
+      return(print(words))
+      
+    }
     
-    chain1 <- paste(tokens[1,1], tokens[2,1], words[1], sep = " ")
-
-    print(words[1])
 }
 
 ```
 
+Lets test some words:
+
+```{r MODEL TEST}
+
+getWords("Tomorrow")
+
+```
+```{r MODEL TEST2}
+
+getWords("I love")
+
+```
+```{r MODEL TEST3}
+
+getWords("Shall we go to")
+
+```
 
 
 
