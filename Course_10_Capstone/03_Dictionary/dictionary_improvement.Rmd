@@ -1,6 +1,8 @@
 ---
 title: "Coursera Data Science Capstone - dictionary improvement"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 
 <style>
@@ -53,6 +55,8 @@ The analysis will be focused on English language. The data from three sources (b
 
 ```{r DATA IMPORT, message=F, warning=F}
 
+setwd("~/R/Learning/Coursera/Course_10_Capstone")
+
 # Import data
 
 rawData <- list(blog = readLines("dataset/final/en_US/en_US.blogs.txt", 
@@ -70,7 +74,7 @@ rawData <- list(blog = readLines("dataset/final/en_US/en_US.blogs.txt",
                                     encoding = "UTF-8")
 )
 
-closeAllConnections()
+#closeAllConnections()
 
 ```
 

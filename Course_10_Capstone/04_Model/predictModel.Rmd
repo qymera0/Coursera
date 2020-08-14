@@ -1,13 +1,16 @@
 ---
 title: "Coursera Data Science word Prediction Model"
-output: html_notebook
+author: "Samuel Bozzi Baco"
+output:
+  html_document:
+    df_print: paged
 ---
 <style>
 body {
 text-align: justify}
 </style>
 
-This document aims to describe the word prediction model creation. This model will futher be implemented on a Shiny App. 
+This document aims to describe the word prediction model creation. This model will further be implemented on a Shiny App. 
 
 This model is based on work from Thiloshon Nagarajah (https://thiloshon.wordpress.com/2018/03/11/build-your-own-word-sentence-prediction-application-part-02/).
 
@@ -32,6 +35,8 @@ The files were downloaded using a link available at Task 0 part of Coursera web 
 
 ```{r DATA DOWLOAD, eval=F, message=F, warning=F}
 
+setwd("~/R/Learning/Coursera/Course_10_Capstone")
+
 fileLink <- "https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip"
 
 # Download raw data
@@ -46,7 +51,7 @@ unzip("dataset/rawData.zip",
 
 ```
 
-The analysis will be focused on English language. The data from three sources (blogs, news and twitter) will be loaded at a list, to be transformed in a Corpus.
+The analysis will be focused on the English language. The data from three sources (blogs, news, and twitter) will be loaded at a list, to be transformed in a Corpus.
 
 ```{r DATA IMPORT, message=FALSE, warning=FALSE}
 
@@ -69,13 +74,13 @@ rawData <- list(blog = readLines("dataset/final/en_US/en_US.blogs.txt",
                                     encoding = "UTF-8")
 )
 
-closeAllConnections()
+#closeAllConnections()
 
 ```
 
 ## 2 DATA SAMPLING AND CLANING
 
-Three samples of raw data will be constructed and cleaned, considering 0.01%, 0.1%, 1% and 10%. As tibble data structure does not accept unequal length, the samples will be constructed for each source than put together after.
+Three samples of raw data will be constructed and cleaned, considering 0.01%, 0.1%, 1%, and 10%. As tibble data structure does not accept unequal length, the samples will be constructed for each source than put together after.
 
 ```{r SAMPLING AND CLEANING}
 
@@ -139,7 +144,7 @@ profaneWords <-
 
 ```
 
-With the samples cleaned, the next step is to tokenize. For the development of the model, the 1% sample size will be used, leaving the 10% sample to final model "fit". Also, after tokenization, the words will be stemmed and the term frequency will be calculated.
+With the samples cleaned, the next step is to tokenize. For the development of the model, the 1% sample size will be used, leaving the 10% sample to the final model "fit". Also, after tokenization, the words will be stemmed and the term frequency will be calculated.
 
 ```{r TOKENIZE AND STEM, message=F, warning=F}
 
@@ -188,7 +193,7 @@ trigrams <-
 
 ## 4 KNESER-NEY SMOTHING
 
-With the tokens, it is possible to apply the Kneser-Ney smother, so the probabilities for each word, depending of the history, is estimated.
+With the tokens, it is possible to apply the Kneser-Ney smother, so the probabilities for each word, depending on the history, is estimated.
 
 ```{r KNESER-NEY, message=F, warning=F}
 
@@ -257,7 +262,7 @@ triKn <-
 
 ## 5 PREDICTION APP
 
-The first function is to predict the third word, given previous two.
+The first function is to predict the third word, given the previous two.
 
 ```{r PREDICT TRIGRAMS}
 
@@ -303,9 +308,7 @@ tri_fun <- function(w1, w2, n = 5){
 
 ```
 
-If we don’t find a tri-gram with the two given words, we backoff to the bi-gram. We find the next word given one previous word.
-
-The backoff algorithm is linked inside each prediction functions
+If the function doesn’t find a tri-gram with the two given words, we back off to the bi-gram. We find the next word given one previous word. The backoff algorithm is linked inside each prediction functions
 
 ```{r PREDICT BIGRAMS}
 
@@ -351,7 +354,7 @@ bi_fun <- function(w2, n = 5){
 
 ```
 
-If we could not even find the corresponding word from bi-gram, we randomly get a "n" words from uni-gram. The sample is made considering the word probability. This is the last resort for n-grams that are not found in the dataset.
+If we could not even find the corresponding word from bi-gram, we randomly get an "n" words from uni-gram. The sample is made considering the word probability. This is the last resort for n-grams that are not found in the dataset.
 
 ```{r PREDICT UNIGRAM}
 
@@ -367,7 +370,7 @@ uni_fun <- function(size = 5){
 
 ```
 
-Finally, a function to bind all these.
+Finally, a function to bind all others.
 
 ```{r APP}
 
