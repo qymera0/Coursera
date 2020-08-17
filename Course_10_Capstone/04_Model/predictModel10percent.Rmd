@@ -1,5 +1,6 @@
 ---
-title: "Coursera Data Science word Prediction Model"
+title: "Coursera Data Science Capstone"
+subtitle: "Prediction Model"
 author: "Samuel Bozzi Baco"
 output:
   html_document:
@@ -27,6 +28,7 @@ library(stringi)
 library(tidyr)
 library(qdap)
 library(SnowballC)
+library(tm)
 ```
 
 ## 1 DATA DOWNLOAD AND READING
@@ -53,7 +55,7 @@ unzip("dataset/rawData.zip",
 
 The analysis will be focused on the English language. The data from three sources (blogs, news, and twitter) will be loaded at a list, to be transformed in a Corpus.
 
-```{r DATA IMPORT, message=FALSE, warning=FALSE}
+```{r DATA IMPORT, message=FALSE, warning=FALSE, cache=T}
 
 # Import data
 
@@ -82,7 +84,7 @@ rawData <- list(blog = readLines("dataset/final/en_US/en_US.blogs.txt",
 
 Three samples of raw data will be constructed and cleaned, considering 0.01%, 0.1%, 1%, and 10%. As tibble data structure does not accept unequal length, the samples will be constructed for each source than put together after.
 
-```{r SAMPLING AND CLEANING}
+```{r SAMPLING AND CLEANING, message=F, warning=F, cache=T}
 
 sample_clean <- function(rawData, size = 0.1) {
   
@@ -100,7 +102,7 @@ sample_clean <- function(rawData, size = 0.1) {
         future_map(replace_url) %>%
         future_map(replace_non_ascii) %>%
         future_map(replace_incomplete) %>%
-        future_map(rmeplace_emoticon) %>%
+        future_map(rm_emoticon, trim = T) %>%
         # Replace accented characters
         future_map(stri_trans_general, 
             id = "Latin-ASCII") %>%
@@ -147,6 +149,14 @@ profaneWords <-
 With the samples cleaned, the next step is to tokenize. For the development of the model, the 1% sample size will be used, leaving the 10% sample to the final model "fit". Also, after tokenization, the words will be stemmed and the term frequency will be calculated.
 
 ```{r TOKENIZE AND STEM, message=F, warning=F}
+
+origWord <-
+        rawSample1 %>%
+        select(-Source) %>%
+        unnest_tokens(word, value) %>%
+        anti_join(profaneWords) %>%
+        distinct()
+  
 
 unigram <-
         rawSample1 %>%
@@ -402,7 +412,7 @@ getWords <- function(str){
     
     if(dim(tokens)[1] < 2){
       
-      words <- bi_fun(tokens[1,1])
+      words <- bi_fun(tokens[1,1], 5)
       
       return(print(words))
       
@@ -410,7 +420,7 @@ getWords <- function(str){
       
       words <- tri_fun(tokens[1,1], tokens[2,1], 5)
     
-      return(print(words))
+      return(paste(words, sep = ", "))
       
     }
     

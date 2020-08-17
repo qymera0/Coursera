@@ -4,7 +4,7 @@
 # Shall we go to
 # Cinco de
 
-str <- "tomorrow I will"
+str <- "Cinco de"
 
 n <- 5
 
@@ -18,33 +18,37 @@ tokens <-
         filter(row_number() <= 2) %>%
         arrange(-row_number())
 
-tri_fun(tokens[1,1], tokens[2,1])
+tri_fun(tokens[1,1], tokens[2,1], n)
 
 # uni_fun
 
-uni_fun <- function(size = n){
+uni_fun <- function(size){
         
         # The function return "size" words, weighted by the probability of 
         # happening.
         
-        return(sample(unigram$word, 
-                      size = size, prob = unigram$uniProb))
+        return(unname(stemCompletion(sample(unigram$word, 
+                                            size = size,
+                                            prob = unigram$uniProb), 
+                                     dictionary = origWord$word, 
+                                     type = "prevalent")))
+              
         
 }
 
 # bi_fun
 
-bi_fun <- function(w2, n = 5){
+bi_fun <- function(w2, n){
         
         pwords <-
                 biKn %>%
-                filter(word1 == as.character(w2))
+                filter(word1 == as.character(tokens[2,1]))
         
         if(dim(pwords)[1] == 0){
                 
                 # Return a word weight by its probability from uni-grams
                 
-                return(uni_fun())
+                return(uni_fun(n))
                 
         } 
         
@@ -58,7 +62,9 @@ bi_fun <- function(w2, n = 5){
                         select(word2) %>%               
                         filter(row_number() <= n)
                 
-                return(p$word2)
+                return(unname(stemCompletion(p$word2, 
+                                             dictionary = origWord$word, 
+                                             type = "prevalent")))
                 
         }
         
@@ -67,9 +73,11 @@ bi_fun <- function(w2, n = 5){
         
         count <- nrow(pwords)
         
-        unWords <- uni_fun()[1:n-count]
+        unWords <- uni_fun((n - count))
         
-        return(c(pwords$word2, unWords))
+        return(unname(stemCompletion(c(pwords$word2, unWords), 
+                                     dictionary = origWord$word, 
+                                     type = "prevalent")))
         
 }
 
@@ -102,14 +110,20 @@ tri_fun <- function(w1, w2, n = 5){
                         select(word3) %>%
                         filter(row_number() <= n)
                 
-                return(p$word3)
+                return(unname(stemCompletion(p$word3, 
+                                             dictionary = origWord$word, 
+                                             type = "prevalent")))
                                 
         }
         
         count <- nrow(pwords)
         
-        bwords <- bi_fun(w2, n)[1:(n - count)]
+        bwords <- bi_fun(w2, (n - count))
         
-        return(c(pwords$word3, bwords))
+        return(unname(stemCompletion(c(p$word3, bwords), 
+                                     dictionary = origWord$word, 
+                                     type = "prevalent")))
         
 }
+
+c <- stemCompletion(paste(p$word3), dictionary = origWord$word, type = "prevalent")

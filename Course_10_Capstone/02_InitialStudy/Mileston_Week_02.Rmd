@@ -1,7 +1,10 @@
 ---
-title: "Coursera HJ Data Science Capstone Week 02"
+title: "Coursera Data Science Capstone Project"
+subtitle: "Initial Study"
 author: "Samuel Bozzi Baco"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 
 <style>
@@ -57,7 +60,9 @@ unzip("dataset/rawData.zip",
 
 The initial analysis will be focused on English language. The data from three sources (blogs, news and twitter) will be loaded at a list, to be transformed in a Corpus.
 
-```{r DATA IMPORT, message=F, warning=F}
+```{r DATA IMPORT, message=F, warning=F, cache = T}
+
+setwd("~/R/Learning/Coursera/Course_10_Capstone")
 
 # Import data
 
@@ -76,13 +81,13 @@ rawData <- list(blog = readLines("dataset/final/en_US/en_US.blogs.txt",
                                     encoding = "UTF-8")
 )
 
-closeAllConnections()
+# closeAllConnections()
 
 ```
 
 As blog and twitter text data are usually little messy (with a lot of misspelling words, emoticons, contractions), the package *textclean* will be used to improve the readability of the text. In addition, some specific patterns like numbers, consecutive repeated words and repeated characters (word elongation) will be removed from text.
 
-```{r SAMPLE AND CLEAN, message = F, warning = F}
+```{r SAMPLE AND CLEAN, message = F, warning = F, cache = T}
 
 # Sample and clean
 
@@ -99,7 +104,7 @@ rawSample <-
         future_map(replace_url) %>%
         future_map(replace_non_ascii) %>%
         future_map(replace_incomplete) %>%
-        future_map(rm_emoticon, trim = T) %>%
+        future_map(replace_emoticon) %>%
         # Replace accented characters
         future_map(stri_trans_general, 
             id = "Latin-ASCII") %>%
@@ -285,6 +290,7 @@ quadgrams %>%
   coord_flip()
 
 ```
+
 Quadgrams tokenizing show interest results. The value "mat hunter mat hunter" came from one entry having the same value repeated several times. The sequence read poem came from only one entry.
 
 ```{r MATT HUNTER}
@@ -294,20 +300,6 @@ print(as.character(rawSample %>% filter(str_detect(value, pattern = "matt hunter
 print(as.character(rawSample %>% filter(str_detect(value, pattern = "read poem"))))
 
 ```
-### 2.2 Pairwise correlation
-
-Considering a sample of 20 line sections of all data, it is possible to calculate the pairwise count for all words.
-
-```{r PAIRWISE COUNT}
-
-pairWise <-
-  rawSample
-
-```
-
-
-## TASK 03: PRELIMINAR MODELING
-
 
 
 

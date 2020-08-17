@@ -1,5 +1,7 @@
 ---
-title: "Coursera Data Science Capstone - dictionary improvement"
+title: "Coursera Data Science Capstone Project"
+subtitle: "Dictionary Study"
+author: "Samuel Bozzi Baco"
 output:
   html_document:
     df_print: paged
@@ -25,11 +27,12 @@ library(data.table)
 library(tidyr)
 library(scales)
 library(qdap)
+library(SnowballC)
 ```
 
 ## 0 INTRODUCTION
 
-This document presents an attempt for dictionary optimization, in order to determine the minimum amount of data necessary to create the final prediction model. Most part follows the suggestions on https://rpubs.com/BreaizhZut/MilesStone_NgramPrediction, with the difference to use Tidy Text package as much as it possible.
+This document presents an attempt for dictionary optimization, in order to determine the minimum amount of data necessary to create the final prediction model. Most part follows the suggestions from Dylan Tweed on https://rpubs.com/BreaizhZut/MilesStone_NgramPrediction, with the difference to use Tidy Text package as much as it possible.
 
 ## 1 DATA DOWNLOAD AND READING
 
@@ -53,7 +56,7 @@ unzip("dataset/rawData.zip",
 
 The analysis will be focused on English language. The data from three sources (blogs, news and twitter) will be loaded at a list, to be transformed in a Corpus.
 
-```{r DATA IMPORT, message=F, warning=F}
+```{r DATA IMPORT, message=F, warning=F, cache=T}
 
 setwd("~/R/Learning/Coursera/Course_10_Capstone")
 
@@ -82,7 +85,7 @@ rawData <- list(blog = readLines("dataset/final/en_US/en_US.blogs.txt",
 
 Three samples of raw data will be constructed and cleaned, considering 0.01%, 0.1%, 1% and 10%. As tibble data structure does not accept unequal length, the samples will be constructed for each source than put together after.
 
-```{r SAMPLING AND CLEANING}
+```{r SAMPLING AND CLEANING, message=F, warning=F, cache=T}
 
 sample_clean <- function(rawData, size = 0.1) {
   
@@ -98,7 +101,7 @@ sample_clean <- function(rawData, size = 0.1) {
         future_map(replace_url) %>%
         future_map(replace_non_ascii) %>%
         future_map(replace_incomplete) %>%
-        future_map(rm_emoticon, trim = T) %>%
+        future_map(replace_emoticon) %>%
         # Replace accented characters
         future_map(stri_trans_general, 
             id = "Latin-ASCII") %>%
@@ -115,11 +118,7 @@ sample_clean <- function(rawData, size = 0.1) {
   
 }
 
-rawSample001 <- sample_clean(rawData, size = 0.0001)
-
-rawSample01 <- sample_clean(rawData, size = 0.001)
-
-rawSample1 <- sample_clean(rawData, size = 0.01)
+# Sample with 10% of the value.
 
 rawSample10 <- sample_clean(rawData, size = 0.1)
 
@@ -157,7 +156,9 @@ unigram <-
         unnest_tokens(word, value) %>%
         anti_join(profaneWords) %>%
         anti_join(stop_words) %>%
-        count(Source, word, sort = T)
+        mutate(word = wordStem(word, language = "english")) %>%
+        count(Source, word, sort = T) 
+        
 
 totalWords <-
         unigram %>% 
@@ -172,10 +173,9 @@ unigram <-
 
 freq <-
        unigram %>%
-       select(-rank) %>% 
+       select(-rank, -n, -total) %>% 
        spread(Source, p) %>%  
        gather(Source, p, `news`:`twitter`)
-      
        
 ```
 
@@ -237,6 +237,7 @@ rankSub %>%
   scale_y_log10()
 
 ```
+
 Twitter data is consistently different from blog and news, mainly until rank < 300. Probably. whole twitter database will be used to create the dictionary.
 
 
